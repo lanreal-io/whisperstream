@@ -1,0 +1,6 @@
+must_contain = [
+    "final sign",
+    "good to go",
+]
+must_not_contain = []
+greeting = "Hi Priya,"

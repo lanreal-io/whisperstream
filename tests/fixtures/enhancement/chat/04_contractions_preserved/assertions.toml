@@ -1,0 +1,8 @@
+must_contain = [
+    "I'm gonna",
+    "wanna",
+]
+must_not_contain = [
+    "I am going to",
+    "want to",
+]

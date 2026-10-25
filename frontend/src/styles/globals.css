@@ -1,0 +1,832 @@
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('/fonts/Outfit-Light.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Outfit-Regular.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/Outfit-Medium.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Outfit';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/Outfit-SemiBold.woff2') format('woff2');
+}
+/* Inter variable supplies the app chrome, quoted content and agent text.
+   Semantic tokens remain separate so each content role can evolve deliberately. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/Inter-Variable.woff2') format('woff2');
+}
+@import "tailwindcss";
+
+/* ============================================================================
+   THEME TOKEN CONTRACT  (app-themes feature)
+   ----------------------------------------------------------------------------
+   Single source of truth for the two shipping themes: Light (formerly
+   "Glacier") and Dark (formerly "Glacier Dark"). The `@theme` block below holds
+   the DEFAULT (Light) values; the `[data-theme="dark"]` block (after
+   `@import "tailwindcss"`, so it wins on cascade) reassigns EVERY token to the
+   dark values, and an explicit `[data-theme="light"]` block restates Light for
+   symmetry.
+
+   The old "Classic" theme was cut (close enough to Light to be redundant). The
+   reference TABLE below keeps a Classic column as historical lineage only; the
+   two shipping themes are Light (the Glacier values) and Dark.
+
+   The runtime switch sets `<html data-theme="...">`; utilities and inline
+   `var(--…)` references re-resolve to the active theme automatically. To add a
+   themeable literal to the UI, route it to one of the tokens below and give it a
+   value in all three columns. Do NOT paste a raw frost/canvas hex into a
+   component (that is backlog #9, the exact duplication this layer removes).
+
+   THE CONTRACT (Phases 2-4 consume this table; keep it accurate):
+
+   Token                 | Role                                   | Classic                                             | Glacier                                             | Glacier-Dark
+   ----------------------|----------------------------------------|-----------------------------------------------------|-----------------------------------------------------|--------------------------------------------------
+   --color-canvas        | Page background                        | #F2F7F9                                             | #EDF4FA                                             | #0C141D
+   --color-frost         | Primary accent (decorative)            | #A3C6E8                                             | #7FB2DE                                             | #7FB2DE
+   --color-frost-deep    | Accent gradient end (decorative)       | #7EAED4                                             | #5590C4                                             | #5590C4
+   --color-frost-light   | Hover tint                             | #C5DCF0                                             | #B9D6EF                                             | #2C4258
+   --color-slate         | Primary text                           | #2A3A4A                                             | #263849                                             | #E9F1F8
+   --color-steel         | Secondary text                         | #6B8299                                             | #607C97                                             | #98AFC5
+   --color-obsidian      | Max-contrast text                      | #111315                                             | #111315                                             | #F7FAFC
+   --color-rose          | Error hue                              | #C48B8B                                             | #C48B8B                                             | #D9A0A0
+   --color-rose-text     | Small error text on pale popup/cards   | #A85F5F                                             | #A85F5F                                             | #D9A0A0
+   --status-check-ink    | Dark glyph on confirmation fill        | #0C141D                                            | #0C141D                                            | #0C141D
+   --color-mint          | Success hue                            | #5BAF7C                                             | #54A876                                             | #6FC08D
+   --color-gold          | Warning/upgrade hue                    | #D4AF37                                             | #D4AF37                                             | #E3C25C
+   --color-gold-deep     | Gold gradient end                      | #B8962F                                             | #B8962F                                             | #C9A83E
+   --color-gold-light    | Gold highlight                         | #F3E5AB                                             | #F3E5AB                                             | #F3E5AB
+   --color-gold-mist     | Gold wash                              | rgba(212,175,55,0.08)                               | rgba(212,175,55,0.08)                               | rgba(227,194,92,0.10)
+   --surface-caution     | Inline caution card background        | rgba(255,250,235,0.85)                              | rgba(255,250,235,0.85)                              | rgba(227,194,92,0.10)
+   --color-caution       | Marginal "runs slowly" hue (signal yellow)| #EAB308                                             | #EAB308                                             | #FACC15
+   --color-caution-deep  | Caution deep (ticks/dot/text)          | #CA8A04                                             | #CA8A04                                             | #EAB308
+   --color-caution-mist  | Caution band wash                      | rgba(234,179,8,0.12)                                | rgba(234,179,8,0.12)                                | rgba(250,204,21,0.14)
+   --accent-fill         | Text-bearing filled control gradient   | linear-gradient(135deg,#A3C6E8,#7EAED4)             | linear-gradient(135deg,#4A7BA8,#2F5E86)             | linear-gradient(135deg,#4A7BA8,#2F5E86)
+   --surface-card        | Main card / dialog surface (lvl 2)     | rgba(255,255,255,0.55)                              | rgba(255,255,255,0.58)                              | rgba(255,255,255,0.08)
+   --surface-sidebar     | Nav frame surface (lvl 1)              | rgba(255,255,255,0.25)                              | rgba(255,255,255,0.42)                              | rgba(255,255,255,0.05)
+   --surface-control     | Inset input/control fill (lvl 3)       | rgba(255,255,255,0.45)                              | rgba(255,255,255,0.45)                              | rgba(255,255,255,0.07)
+   --surface-raised      | List row that lifts on hover (lvl 3)   | rgba(255,255,255,0.45)                              | rgba(255,255,255,0.45)                              | rgba(255,255,255,0.07)
+   --surface-overlay     | Dropdown / overlay panel (lvl 4)       | rgba(255,255,255,0.95)                              | rgba(255,255,255,0.95)                              | rgba(19,29,40,0.96)
+   --surface-modal       | In-app dialog card fill                | rgba(255,255,255,0.96)                              | rgba(255,255,255,0.96)                              | rgba(19,29,40,0.96)
+   --surface-popup       | Desktop-floating popup card fill       | rgba(242,247,249,0.96)                              | rgba(242,247,249,0.96)                              | rgba(19,29,40,0.96)
+   --surface-hover       | Hover/focus lift on a control/row      | rgba(255,255,255,0.60)                              | rgba(255,255,255,0.60)                              | rgba(255,255,255,0.10)
+   --surface-row         | Nested list row (profiles)             | n/a                                                 | rgba(255,255,255,0.08)                              | rgba(150,190,230,0.06)
+   --surface-row-hover   | Nested list row hover                  | n/a                                                 | rgba(255,255,255,0.18)                              | rgba(150,190,230,0.10)
+   --surface-row-selected| Default/selected nested row            | n/a                                                 | rgba(255,255,255,0.22)                              | rgba(127,178,222,0.12)
+   --surface-row-selected-hover | Selected nested row hover       | n/a                                                 | rgba(255,255,255,0.28)                              | rgba(127,178,222,0.16)
+   --surface-tile        | Transcript card                        | n/a                                                 | rgba(255,255,255,0.12)                              | rgba(150,190,230,0.06)
+   --surface-tile-expanded | Expanded transcript card             | n/a                                                 | rgba(255,255,255,0.18)                              | rgba(150,190,230,0.09)
+   --surface-tile-hover  | Transcript card hover                  | n/a                                                 | rgba(255,255,255,0.22)                              | rgba(150,190,230,0.10)
+   --surface-entry       | Dictionary entry row                   | n/a                                                 | rgba(255,255,255,0.45)                              | rgba(150,190,230,0.06)
+   --surface-entry-hover | Dictionary entry row hover/editing     | n/a                                                 | rgba(255,255,255,0.60)                              | rgba(150,190,230,0.10)
+   --border-entry        | Dictionary entry row edge              | n/a                                                 | rgba(255,255,255,0.55)                              | rgba(255,255,255,0.03)
+   --nav-active-fill     | Selected sidebar tab fill              | n/a                                                 | rgba(255,255,255,0.45)                              | rgba(127,178,222,0.12)
+   --nav-active-border   | Selected sidebar tab edge              | n/a                                                 | rgba(255,255,255,0.80)                              | rgba(127,178,222,0.28)
+   --nav-active-glow     | Selected sidebar tab bloom             | n/a                                                 | 0 0 24px rgba(127,178,222,0.40)                     | none
+   --rim-scale           | Multiplier on caught-light top edges   | n/a                                                 | 1                                                   | 0.08
+   --backdrop-strong     | Dialog backdrop, 40px-blur (family A/B)| rgba(242,247,249,0.75)                              | rgba(242,247,249,0.75)                              | rgba(8,13,20,0.78)
+   --backdrop-soft       | Dialog backdrop, 8px-blur (family C)   | rgba(242,247,249,0.70)                              | rgba(242,247,249,0.70)                              | rgba(8,13,20,0.72)
+   --halo-gold           | Dialog-icon halo center (caution)      | color-mix(gold 10%)                                 | color-mix(gold 10%)                                 | color-mix(gold 20%)
+   --halo-caution        | Caution halo center                    | color-mix(caution 10%)                              | color-mix(caution 10%)                              | color-mix(caution 20%)
+   --halo-frost          | Dialog-icon halo center (info)         | color-mix(frost 12%)                                | color-mix(frost 12%)                                | color-mix(frost 26%)
+   --halo-mint           | Dialog-icon halo center (success)      | color-mix(mint 12%)                                 | color-mix(mint 12%)                                 | color-mix(mint 24%)
+   --border-emphasis     | Card border                            | rgba(255,255,255,0.80)                              | rgba(255,255,255,0.80)                              | rgba(255,255,255,0.11)
+   --border-standard     | Sidebar border                         | rgba(255,255,255,0.60)                              | rgba(255,255,255,0.60)                              | rgba(255,255,255,0.08)
+   --border-hairline     | Control border                         | rgba(255,255,255,0.55)                              | rgba(255,255,255,0.55)                              | rgba(255,255,255,0.08)
+   --border-hairline-steel | Secondary edge on pale popup cards   | rgba(107,130,153,0.22)                              | rgba(107,130,153,0.22)                              | rgba(255,255,255,0.12)
+   --border-accent       | Active/selected frost edge             | rgba(163,198,232,0.40)                              | rgba(127,178,222,0.40)                              | rgba(127,178,222,0.30)
+   --divider             | Etched in-content line                 | rgba(255,255,255,0.20)                              | rgba(255,255,255,0.25)                              | rgba(255,255,255,0.12)
+   --tab-rule            | Base line under a tab strip            | n/a                                                 | rgba(107,130,153,0.18)                              | rgba(255,255,255,0.12)
+   --range-track-inset   | Unfilled slider track inside a field   | n/a                                                 | rgba(96,124,151,0.22)                               | rgba(255,255,255,0.14)
+   --shadow-glass        | Full glass elevation                   | inset light + white ring + blue drop (main)         | specular ring + blue drop (glacier §5)              | dimmed ring + black drop (dark §5)
+   --shadow-glass-sm     | Small glass elevation                  | inset light + blue drop (main)                      | specular ring + blue drop (glacier §5)              | dimmed ring + black drop (dark §5)
+   --shadow-frost-glow   | Focus/capture bloom                    | 0 0 20px rgba(163,198,232,0.30)                     | 0 0 24px rgba(127,178,222,0.40)                     | 0 0 18px rgba(127,178,222,0.18)
+   --shadow-pearl        | Pearl bloom (slider thumb etc.)        | white glow + blue drop (main)                       | white glow + deeper blue drop (glacier §5)          | frost glow + black drop (dark §5)
+   --scrollbar-thumb     | Scrollbar thumb fill                   | rgba(163,198,232,0.25)                              | rgba(127,178,222,0.30)                              | rgba(127,178,222,0.22)
+   --scrollbar-thumb-hover| Scrollbar thumb hover fill            | rgba(163,198,232,0.45)                              | rgba(127,178,222,0.50)                              | rgba(127,178,222,0.40)
+   --range-thumb-shadow  | Slider-thumb glow + drop               | 0 0 10px rgba(255,255,255,0.5),0 2px 6px rgba(163,198,232,0.3) | 0 0 10px rgba(255,255,255,0.5),0 2px 6px rgba(85,144,196,0.3) | 0 0 12px rgba(127,178,222,0.2),0 2px 10px rgba(0,0,0,0.4)
+   --frost-mesh-1        | Mesh blob tint 1                       | rgba(163,198,232,0.20)                              | rgba(127,178,222,0.24)                              | rgba(127,178,222,0.14)
+   --frost-mesh-2        | Mesh blob tint 2                       | rgba(150,195,232,0.15)                              | rgba(150,195,232,0.18)                              | rgba(150,195,232,0.10)
+   --frost-mesh-3        | Mesh blob tint 3                       | rgba(163,198,232,0.12)                              | rgba(127,178,222,0.15)                              | rgba(127,178,222,0.08)
+   --frost-muted         | Dimmed decorative blue (waveform)      | #7EAED4                                             | #5B7FA5                                             | #7FA3C9
+   --hud-expand-border   | HUD expand/collapse pill edge          | n/a                                                 | rgba(85,144,196,0.45)                               | rgba(255,255,255,0.16)
+   --hud-expand-icon     | HUD expand/collapse pill glyph         | n/a                                                 | #3A6E9E                                             | #A6B9CC
+   --font-mono           | Inline and fenced code (GLOBAL)        | ui-monospace stack                                  | ui-monospace stack                                  | ui-monospace stack
+   --hud-* console set   | HUD-only agent console reading tokens  | n/a                                                 | pages/hud/material.ts light palette                 | pages/hud/material.ts dark palette
+   --radius-card         | Main card / dialog radius (GLOBAL)     | 28px                                                | 28px                                                | 28px
+   --radius-row          | Row / dropdown-panel radius (GLOBAL)   | 18px                                                | 18px                                                | 18px
+   --radius-input        | Input / dropdown-trigger radius(GLOBAL)| 12px                                                | 12px                                                | 12px
+
+   Notes:
+   - GEOMETRY IS GLOBAL (user decision): radii (28/18/12), the density tightening
+     (py-3.5->py-3, space-y-6->5, py-8->7), and type (stat 30px, label tracking
+     0.08em) are the SAME in all three themes. Themes differ by COLOR / SURFACE /
+     SHADOW / BORDER only. Classic = today's colors on the new Glacier geometry.
+   - Pills stay `rounded-full` in every theme (not tokenized).
+   - The hover-target control alpha (Glacier 0.60 / Dark 0.10) is a per-callsite
+     class, NOT a token (only the resting value lives in --surface-control/raised).
+   - Classic's filled controls use the PALE frost gradient (--accent-fill); the
+     deep #4A7BA8→#2F5E86 gradient is Glacier/Dark only. That per-theme swap is
+     the whole point of routing filled controls through --accent-fill.
+   - Dark leans on the `inset 0 0 0 1px rgba(255,255,255,α)` specular ring inside
+     --shadow-glass for elevation (drop shadows read weakly on #0C141D); never
+     drop that ring when tokenizing.
+   - --frost-mesh-* / --frost-muted Classic values approximate main's decorative
+     blues; the accent frost hue moved from #A3C6E8 (Classic) to #7FB2DE (Glacier).
+
+   DIALOG / POPUP SURFACES (Task 4.1 derivation — dark values follow PR #241's
+   recipe: white-glass -> low-alpha white on dark; light frosted overlay ->
+   near-solid dark; blue drop shadow -> black):
+   - Dialog CARD reuses --surface-card. The dialog card (Glacier light 0.55) and
+     the page card (0.58) are the same main-card surface one notch apart; no
+     genuine three-theme divergence justifies a separate --surface-dialog, so
+     dialogs route their card fill to --surface-card, border to --border-emphasis,
+     glow to --shadow-glass, radius to --radius-card (Task 4.2).
+   - Dialog BACKDROP is NOT a surface/overlay (it is a full-window frosted scrim
+     of the canvas), so it has no existing home -> two new tokens:
+     * --backdrop-strong : the 40px-blur family-A/B backdrop (rgba(242,247,249,0.75)
+       light -> near-solid rgba(8,13,20,0.78) dark). Blur stays at the callsite.
+     * --backdrop-soft   : the 8px-blur family-C download-dialog backdrop
+       (rgba(242,247,249,0.70) light -> rgba(8,13,20,0.72) dark). Kept DISTINCT
+       from -strong (the two variants differ by blur, handled at the callsite;
+       only the color is tokenized). Do NOT collapse them.
+     Classic backdrop values equal Glacier's (Classic and Glacier share the same
+     light frosted backdrop; only the dark theme inverts).
+   - HOVER-LIFT reconciliation (found in Task 3.2): several list/card/input rows
+     hardcode a hover/focus lift to rgba(255,255,255,0.60) (bright white), correct
+     for the light themes but a bright-white-on-dark flash on the dark theme (dark
+     hover should be ~0.10). --surface-hover carries that per-theme (Classic 0.60 /
+     Glacier 0.60 / Dark 0.10). ONE rung is enough — the two known idioms (row
+     hover-lift and input focus-lift) both target the same 0.60 white.
+     Route these callsites to var(--surface-hover) in Tasks 4.2-4.5:
+       * Dictionary.tsx EntryRow  — hover + isEditing lift (~L536/L542; resting is
+         already --surface-raised).
+       * CustomPromptDialog.tsx   — textarea focus-lift 0.45 -> 0.60 (~L135).
+       * StepWelcome.tsx          — row hover-lift (~L101/L114).
+       * Transcripts.tsx card     — hover lift 0.07 -> 0.10 dark (Task 3.4).
+       * ProfileEditorModal / Enhancement / Pro — any 0.60 white hover/focus-lift.
+     Caught-light top edges stay white but scale per theme: write them as
+     `inset 0 1px 0 rgb(255 255 255 / calc(0.6 * var(--rim-scale)))`, with the
+     Light alpha as the factor. Dark's --rim-scale dims them so pills and
+     buttons do not glow. Rims on the accent fill (PrimaryButton) and the HUD's
+     own material stay literal. Only route a 0.60 white that is a background
+     FILL to --surface-hover.
+   ============================================================================ */
+
+@theme {
+  /* Named-color + shadow tokens default to LIGHT / Glacier (see glacier.md §3/§5). */
+  --color-canvas: #EDF4FA;
+  --color-frost: #7FB2DE;
+  --color-frost-deep: #5590C4;
+  --color-frost-light: #B9D6EF;
+  --color-slate: #263849;
+  --color-steel: #607C97;
+  --color-obsidian: #111315;
+  --color-rose: #C48B8B;
+  --color-rose-text: #A85F5F;
+  --status-check-ink: #0C141D;
+  --color-mint: #54A876;
+  --color-gold: #D4AF37;
+  --color-gold-deep: #B8962F;
+  --color-gold-light: #F3E5AB;
+  --color-gold-mist: rgba(212, 175, 55, 0.08);
+  --surface-caution: rgba(255, 250, 235, 0.85);
+  /* Signal-yellow "marginal / runs slowly" hue (tiered-benchmark round 01,
+     Issue 4). Deliberately distinct from --color-gold (the Pro/upgrade hue,
+     untouched) — see the THEME TOKEN CONTRACT above. */
+  --color-caution: #EAB308;
+  --color-caution-deep: #CA8A04;
+  --color-caution-mist: color-mix(in srgb, var(--color-caution) 12%, transparent);
+
+  /* Legacy aliases */
+  --color-amber: #D4AF37;
+  --color-amber-deep: #B8962F;
+  --color-amber-light: #F3E5AB;
+
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  /* Content-role aliases keep transcript and agent text independent of chrome. */
+  --font-quote: 'Inter', system-ui, sans-serif;
+  --font-agent: 'Inter', system-ui, sans-serif;
+  /* Code in agent text. Platform monospace, no webfont. */
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+
+  /* Glacier depth model: kept inset top light + a full-perimeter specular ring
+     (inset 0 0 0 1px) + soft blue drop shadows layered underneath. */
+  --shadow-glass: inset 0 1px 0 rgba(255, 255, 255, 1), inset 0 0 0 1px rgba(255, 255, 255, 0.38), 0 20px 44px -12px rgba(85, 144, 196, 0.35), 0 2px 8px rgba(85, 144, 196, 0.12);
+  --shadow-glass-sm: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 8px 20px -8px rgba(85, 144, 196, 0.22);
+  --shadow-frost-glow: 0 0 24px rgba(127, 178, 222, 0.4);
+  --shadow-pearl: 0 0 12px rgba(255, 255, 255, 0.65), 0 2px 10px rgba(85, 144, 196, 0.3);
+
+  /* Accent fill: the AA-passing, text-bearing filled-control gradient. */
+  --accent-fill: linear-gradient(135deg, #4A7BA8, #2F5E86);
+
+  /* Surfaces (role-based elevation ladder, level in parens). */
+  --surface-card: rgba(255, 255, 255, 0.58);
+  --surface-sidebar: rgba(255, 255, 255, 0.42);
+  --surface-control: rgba(255, 255, 255, 0.45);
+  --surface-raised: rgba(255, 255, 255, 0.45);
+  --surface-overlay: rgba(255, 255, 255, 0.95);
+  --surface-modal: rgba(255, 255, 255, 0.96);   /* in-app dialog card fill */
+  --surface-popup: rgba(242, 247, 249, 0.96);   /* desktop-floating popup card fill; tinted so its edge survives over white windows */
+  --rim-specular: rgba(255, 255, 255, 1);
+  /* Hover/focus lift on a control or list row (resting surface -> this on hover).
+     Dark drops to 0.10 so it does not flash bright white on #0C141D. */
+  --surface-hover: rgba(255, 255, 255, 0.6);
+  /* Nested list rows (profiles) and tiles (transcript cards). */
+  --surface-row: rgba(255, 255, 255, 0.08);
+  --surface-row-hover: rgba(255, 255, 255, 0.18);
+  --surface-row-selected: rgba(255, 255, 255, 0.22);
+  --surface-row-selected-hover: rgba(255, 255, 255, 0.28);
+  --surface-tile: rgba(255, 255, 255, 0.12);
+  --surface-tile-expanded: rgba(255, 255, 255, 0.18);
+  --surface-tile-hover: rgba(255, 255, 255, 0.22);
+  /* Dictionary entry rows: the border matches the white fill, so rows read
+     as fill alone. */
+  --surface-entry: rgba(255, 255, 255, 0.45);
+  --surface-entry-hover: rgba(255, 255, 255, 0.6);
+  --border-entry: rgba(255, 255, 255, 0.55);
+  /* Selected sidebar tab. */
+  --nav-active-fill: rgba(255, 255, 255, 0.45);
+  --nav-active-border: rgba(255, 255, 255, 0.8);
+  --nav-active-glow: 0 0 24px rgba(127, 178, 222, 0.4);
+  /* Multiplier on every caught-light top edge (`inset 0 1px 0`). */
+  --rim-scale: 1;
+
+  /* Dialog backdrops (frosted-canvas scrim; blur handled at the callsite).
+     -strong = 40px-blur family A/B, -soft = 8px-blur family C. Kept distinct. */
+  --backdrop-strong: rgba(242, 247, 249, 0.75);
+  --backdrop-soft: rgba(242, 247, 249, 0.7);
+
+  /* Dialog-icon halo washes (the radial-gradient CENTER color; the gradient
+     shape + scale live at the callsite). Light keeps these faint so the halo
+     reads as a seat for the icon, not a stain on the white card; dark leans
+     brighter because a glow reads as emitted light there. */
+  --halo-gold: color-mix(in srgb, var(--color-gold) 10%, transparent);
+  --halo-caution: color-mix(in srgb, var(--color-caution) 10%, transparent);
+  --halo-frost: color-mix(in srgb, var(--color-frost) 12%, transparent);
+  --halo-mint: color-mix(in srgb, var(--color-mint) 12%, transparent);
+
+  /* Borders (three surface rungs + accent edge + etched divider). */
+  --border-emphasis: rgba(255, 255, 255, 0.8);
+  --border-standard: rgba(255, 255, 255, 0.6);
+  --border-hairline: rgba(255, 255, 255, 0.55);
+  --border-hairline-steel: rgba(107, 130, 153, 0.22);
+  --border-accent: rgba(127, 178, 222, 0.4);
+  --divider: rgba(255, 255, 255, 0.25);
+  --tab-rule: rgba(107, 130, 153, 0.18);
+  --range-track-inset: rgba(96, 124, 151, 0.22);
+
+  /* Misc themeable literals. */
+  --scrollbar-thumb: rgba(127, 178, 222, 0.3);
+  --scrollbar-thumb-hover: rgba(127, 178, 222, 0.5);
+  --range-thumb-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 2px 6px rgba(85, 144, 196, 0.3);
+  --frost-mesh-1: rgba(127, 178, 222, 0.24);
+  --frost-mesh-2: rgba(150, 195, 232, 0.18);
+  --frost-mesh-3: rgba(127, 178, 222, 0.15);
+  --frost-muted: #5B7FA5;
+
+  /* HUD expand/collapse pill (glance card, console, Live Preview). Light reads
+     as the frost accent; dark stays neutral (owner decision 2026-10-23). */
+  --hud-expand-border: rgba(85, 144, 196, 0.45);
+  --hud-expand-icon: #3A6E9E;
+
+  /* Per-theme radii (concentric scale; pills stay rounded-full). */
+  --radius-card: 28px;
+  --radius-row: 18px;
+  --radius-input: 12px;
+}
+/* ---------------------------------------------------------------------------
+   Light (default) — restated for symmetry; identical to the `@theme` block.
+   The `@theme` values already ARE Light, so this block is optional, but it
+   keeps both themes readable side-by-side and lets a future edit touch one
+   consistent place per theme.
+   --------------------------------------------------------------------------- */
+[data-theme="light"] {
+  --color-canvas: #EDF4FA;
+  --color-frost: #7FB2DE;
+  --color-frost-deep: #5590C4;
+  --color-frost-light: #B9D6EF;
+  --color-slate: #263849;
+  --color-steel: #607C97;
+  --color-obsidian: #111315;
+  --color-rose: #C48B8B;
+  --color-rose-text: #A85F5F;
+  --status-check-ink: #0C141D;
+  --color-mint: #54A876;
+  --color-gold: #D4AF37;
+  --color-gold-deep: #B8962F;
+  --color-gold-light: #F3E5AB;
+  --color-gold-mist: rgba(212, 175, 55, 0.08);
+  --surface-caution: rgba(255, 250, 235, 0.85);
+  --color-caution: #EAB308;
+  --color-caution-deep: #CA8A04;
+  --color-caution-mist: color-mix(in srgb, var(--color-caution) 12%, transparent);
+
+  --color-amber: #D4AF37;
+  --color-amber-deep: #B8962F;
+  --color-amber-light: #F3E5AB;
+
+  --shadow-glass: inset 0 1px 0 rgba(255, 255, 255, 1), inset 0 0 0 1px rgba(255, 255, 255, 0.38), 0 20px 44px -12px rgba(85, 144, 196, 0.35), 0 2px 8px rgba(85, 144, 196, 0.12);
+  --shadow-glass-sm: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.25), 0 8px 20px -8px rgba(85, 144, 196, 0.22);
+  --shadow-frost-glow: 0 0 24px rgba(127, 178, 222, 0.4);
+  --shadow-pearl: 0 0 12px rgba(255, 255, 255, 0.65), 0 2px 10px rgba(85, 144, 196, 0.3);
+
+  --accent-fill: linear-gradient(135deg, #4A7BA8, #2F5E86);
+
+  --surface-card: rgba(255, 255, 255, 0.58);
+  --surface-sidebar: rgba(255, 255, 255, 0.42);
+  --surface-control: rgba(255, 255, 255, 0.45);
+  --surface-raised: rgba(255, 255, 255, 0.45);
+  --surface-overlay: rgba(255, 255, 255, 0.95);
+  --surface-modal: rgba(255, 255, 255, 0.96);   /* in-app dialog card fill */
+  --surface-popup: rgba(242, 247, 249, 0.96);   /* desktop-floating popup card fill; tinted so its edge survives over white windows */
+  --rim-specular: rgba(255, 255, 255, 1);
+  --surface-hover: rgba(255, 255, 255, 0.6);
+  /* Nested list rows (profiles) and tiles (transcript cards). */
+  --surface-row: rgba(255, 255, 255, 0.08);
+  --surface-row-hover: rgba(255, 255, 255, 0.18);
+  --surface-row-selected: rgba(255, 255, 255, 0.22);
+  --surface-row-selected-hover: rgba(255, 255, 255, 0.28);
+  --surface-tile: rgba(255, 255, 255, 0.12);
+  --surface-tile-expanded: rgba(255, 255, 255, 0.18);
+  --surface-tile-hover: rgba(255, 255, 255, 0.22);
+  /* Dictionary entry rows: the border matches the white fill, so rows read
+     as fill alone. */
+  --surface-entry: rgba(255, 255, 255, 0.45);
+  --surface-entry-hover: rgba(255, 255, 255, 0.6);
+  --border-entry: rgba(255, 255, 255, 0.55);
+  /* Selected sidebar tab. */
+  --nav-active-fill: rgba(255, 255, 255, 0.45);
+  --nav-active-border: rgba(255, 255, 255, 0.8);
+  --nav-active-glow: 0 0 24px rgba(127, 178, 222, 0.4);
+  /* Multiplier on every caught-light top edge (`inset 0 1px 0`). */
+  --rim-scale: 1;
+
+  --backdrop-strong: rgba(242, 247, 249, 0.75);
+  --backdrop-soft: rgba(242, 247, 249, 0.7);
+
+  --halo-gold: color-mix(in srgb, var(--color-gold) 10%, transparent);
+  --halo-caution: color-mix(in srgb, var(--color-caution) 10%, transparent);
+  --halo-frost: color-mix(in srgb, var(--color-frost) 12%, transparent);
+  --halo-mint: color-mix(in srgb, var(--color-mint) 12%, transparent);
+
+  --border-emphasis: rgba(255, 255, 255, 0.8);
+  --border-standard: rgba(255, 255, 255, 0.6);
+  --border-hairline: rgba(255, 255, 255, 0.55);
+  --border-hairline-steel: rgba(107, 130, 153, 0.22);
+  --border-accent: rgba(127, 178, 222, 0.4);
+  --divider: rgba(255, 255, 255, 0.25);
+  --tab-rule: rgba(107, 130, 153, 0.18);
+  --range-track-inset: rgba(96, 124, 151, 0.22);
+
+  --scrollbar-thumb: rgba(127, 178, 222, 0.3);
+  --scrollbar-thumb-hover: rgba(127, 178, 222, 0.5);
+  --range-thumb-shadow: 0 0 10px rgba(255, 255, 255, 0.5), 0 2px 6px rgba(85, 144, 196, 0.3);
+  --frost-mesh-1: rgba(127, 178, 222, 0.24);
+  --frost-mesh-2: rgba(150, 195, 232, 0.18);
+  --frost-mesh-3: rgba(127, 178, 222, 0.15);
+  --frost-muted: #5B7FA5;
+
+  /* HUD expand/collapse pill (glance card, console, Live Preview). Light reads
+     as the frost accent; dark stays neutral (owner decision 2026-10-23). */
+  --hud-expand-border: rgba(85, 144, 196, 0.45);
+  --hud-expand-icon: #3A6E9E;
+
+  --radius-card: 28px;
+  --radius-row: 18px;
+  --radius-input: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Dark — smoked glass on a glacial-night canvas (glacier-dark.md §3/§5).
+   The deep --accent-fill gradient is kept verbatim; surfaces drop to the smoked
+   band; drop shadows go true-dark; the specular ring survives at low alpha as
+   the dark elevation cue; overlays go near-solid dark (NOT Light's white 0.95).
+   --------------------------------------------------------------------------- */
+[data-theme="dark"] {
+  --color-canvas: #0C141D;
+  --color-frost: #7FB2DE;
+  --color-frost-deep: #5590C4;
+  --color-frost-light: #2C4258;
+  --color-slate: #E9F1F8;
+  --color-steel: #98AFC5;
+  --color-obsidian: #F7FAFC;
+  --color-rose: #D9A0A0;
+  --color-rose-text: #D9A0A0;
+  --status-check-ink: #0C141D;
+  --color-mint: #6FC08D;
+  --color-gold: #E3C25C;
+  --color-gold-deep: #C9A83E;
+  --color-gold-light: #F3E5AB;
+  --color-gold-mist: rgba(227, 194, 92, 0.1);
+  --surface-caution: rgba(227, 194, 92, 0.1);
+  --color-caution: #FACC15;
+  --color-caution-deep: #EAB308;
+  --color-caution-mist: color-mix(in srgb, var(--color-caution) 14%, transparent);
+
+  --color-amber: #E3C25C;
+  --color-amber-deep: #C9A83E;
+  --color-amber-light: #F3E5AB;
+
+  --shadow-glass: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 20px 44px -12px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.26);
+  --shadow-glass-sm: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 20px -8px rgba(0, 0, 0, 0.36);
+  --shadow-frost-glow: 0 0 18px rgba(127, 178, 222, 0.18);
+  --shadow-pearl: 0 0 12px rgba(127, 178, 222, 0.2), 0 2px 10px rgba(0, 0, 0, 0.4);
+
+  /* Kept verbatim: still AA, and it now reads as lit ice against the night. */
+  --accent-fill: linear-gradient(135deg, #4A7BA8, #2F5E86);
+
+  --surface-card: rgba(255, 255, 255, 0.08);
+  --surface-sidebar: rgba(255, 255, 255, 0.05);
+  --surface-control: rgba(255, 255, 255, 0.07);
+  --surface-raised: rgba(255, 255, 255, 0.07);
+  --surface-overlay: rgba(19, 29, 40, 0.96);
+  --surface-modal: rgba(19, 29, 40, 0.96);
+  --surface-popup: rgba(19, 29, 40, 0.96);
+  --rim-specular: rgba(255, 255, 255, 0.14);
+  /* Smoked hover lift (bright white would blow out on #0C141D). */
+  --surface-hover: rgba(255, 255, 255, 0.1);
+  /* Nested rows and tiles take a faint frost tint: neutral white over the
+     blue-black canvas reads as gray. Selection is a frost tint, not more white. */
+  --surface-row: rgba(150, 190, 230, 0.06);
+  --surface-row-hover: rgba(150, 190, 230, 0.1);
+  --surface-row-selected: rgba(127, 178, 222, 0.12);
+  --surface-row-selected-hover: rgba(127, 178, 222, 0.16);
+  --surface-tile: rgba(150, 190, 230, 0.06);
+  --surface-tile-expanded: rgba(150, 190, 230, 0.09);
+  --surface-tile-hover: rgba(150, 190, 230, 0.1);
+  /* Dictionary rows sit 4px apart, so a visible edge on each turns the list
+     into stacked capsules. Like Light, the edge nearly matches the fill. */
+  --surface-entry: rgba(150, 190, 230, 0.06);
+  --surface-entry-hover: rgba(150, 190, 230, 0.1);
+  --border-entry: rgba(255, 255, 255, 0.03);
+  --nav-active-fill: rgba(127, 178, 222, 0.12);
+  --nav-active-border: rgba(127, 178, 222, 0.28);
+  --nav-active-glow: none;
+  /* Light's caught-light rims (0.6-1 white) become 5-8% here; at full strength
+     they read as bright rings around every pill. */
+  --rim-scale: 0.08;
+
+  /* Near-solid glacial-night backdrop (light frosted scrim -> dark), following
+     PR #241's overlay recipe. -strong (40px blur) reads a touch more opaque than
+     -soft (8px blur) so both variants block the mesh behind the dialog. */
+  --backdrop-strong: rgba(8, 13, 20, 0.78);
+  --backdrop-soft: rgba(8, 13, 20, 0.72);
+
+  /* Halos lean brighter in dark: a glow on a night canvas reads as emitted
+     light, where the same strength on a white card reads as a stain. */
+  --halo-gold: color-mix(in srgb, var(--color-gold) 20%, transparent);
+  --halo-caution: color-mix(in srgb, var(--color-caution) 20%, transparent);
+  --halo-frost: color-mix(in srgb, var(--color-frost) 26%, transparent);
+  --halo-mint: color-mix(in srgb, var(--color-mint) 24%, transparent);
+
+  --border-emphasis: rgba(255, 255, 255, 0.11);
+  --border-standard: rgba(255, 255, 255, 0.08);
+  --border-hairline: rgba(255, 255, 255, 0.08);
+  --border-hairline-steel: rgba(255, 255, 255, 0.12);
+  --border-accent: rgba(127, 178, 222, 0.3);
+  --divider: rgba(255, 255, 255, 0.12);
+  --tab-rule: rgba(255, 255, 255, 0.12);
+  --range-track-inset: rgba(255, 255, 255, 0.14);
+
+  --scrollbar-thumb: rgba(127, 178, 222, 0.22);
+  --scrollbar-thumb-hover: rgba(127, 178, 222, 0.4);
+  --range-thumb-shadow: 0 0 12px rgba(127, 178, 222, 0.2), 0 2px 10px rgba(0, 0, 0, 0.4);
+  --frost-mesh-1: rgba(127, 178, 222, 0.14);
+  --frost-mesh-2: rgba(150, 195, 232, 0.1);
+  --frost-mesh-3: rgba(127, 178, 222, 0.08);
+  --frost-muted: #7FA3C9;
+
+  --hud-expand-border: rgba(255, 255, 255, 0.16);
+  --hud-expand-icon: #A6B9CC;
+
+  --radius-card: 28px;
+  --radius-row: 18px;
+  --radius-input: 12px;
+}
+
+@layer base {
+  html, body, #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: var(--font-body);
+    /* Preserve the existing medium body weight with the public Inter family.
+       Explicit weight utilities and Outfit display headings remain independent. */
+    font-weight: 500;
+    color: var(--color-slate);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Pin the outline color/width/offset on every element so the focus ring never
+   ANIMATES. Many elements use `transition: all`, which would otherwise sweep
+   outline-color from the inherited currentColor (dark text) to the frost ring
+   on focus and back on blur -- the "dark then lighten" flash. With these pinned,
+   focusing only flips outline-STYLE (none -> solid), which isn't animatable, so
+   the ring appears/disappears cleanly with no color sweep. */
+* {
+  outline-color: var(--color-frost);
+  outline-width: 2px;
+  outline-offset: 2px;
+}
+
+/* Focus ring. This single unlayered rule is the app-wide focus indicator
+   (Option 2): one consistent frost outline on every focusable element.
+   Per-field box-shadow focus rings were removed so this no longer double-rings. */
+*:focus-visible {
+  outline: 2px solid var(--color-frost);
+  outline-offset: 2px;
+}
+
+/* Composite frosted field groups: a frosted container wrapping borderless
+   inputs (Dictionary add-word row, Dictionary edit row, Transcripts search).
+   The group draws ONE outline that wraps the whole pill when an inner INPUT is
+   focused, and the inner input suppresses its own outline (which would
+   otherwise draw a narrow rectangle around just the short text box). Uses
+   :has(input...) so buttons inside the group keep their own normal outline and
+   don't trigger the group outline. */
+.frost-field-group:has(input:focus-visible) {
+  outline: 2px solid var(--color-frost);
+  outline-offset: 2px;
+}
+.frost-field-group input:focus-visible {
+  outline: none;
+}
+
+/* Range slider — fill is driven per instance by --range-fill (default 0%).
+   --range-fill is per-instance geometry (a percent), not a color, so it is
+   NOT in the THEME TOKEN CONTRACT table -- set it inline via lib/rangeFill.ts's
+   rangeFill(value, min, max) at every <input type="range"> call site. This one
+   rule governs every slider in the app (Audio's chime volume, and
+   HudConfigModal's Speech speed, Speech volume, and Reply window), so it must
+   stay generic. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-frost) 0%,
+    var(--color-frost) var(--range-fill, 0%),
+    var(--surface-control) var(--range-fill, 0%),
+    var(--surface-control) 100%
+  );
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  /* Per-theme glow + drop: white glow + blue drop (light), frost glow + black
+     drop (dark). Routed through --range-thumb-shadow so it re-resolves per theme. */
+  box-shadow: var(--range-thumb-shadow);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.08);
+}
+
+/* Firefox parity (missing before this rule set). */
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  box-shadow: var(--range-thumb-shadow);
+  cursor: pointer;
+}
+
+/* The app-wide 2px offset hugs a 4px-tall box and reads as a line, not a ring. */
+input[type="range"]:focus-visible {
+  outline-offset: 4px;
+}
+
+/* SliderField (components/SliderField.tsx): a range input seated in a control
+   field with its value at the right. The field fill is --surface-control, the
+   same colour as the global track's unfilled part, so inside a field the
+   unfilled track switches to --range-track-inset or it would vanish. The
+   `--bare` variant (owner's S3) drops the field chrome and keeps the layout. */
+.slider-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 6px 5px 14px;
+  border-radius: var(--radius-input);
+  background: var(--surface-control);
+  border: 1px solid var(--border-hairline-steel);
+}
+.slider-field--bare {
+  background: transparent;
+  border-color: transparent;
+  padding-left: 0;
+}
+.slider-field input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: linear-gradient(
+    to right,
+    var(--color-frost) 0%,
+    var(--color-frost) var(--range-fill, 0%),
+    var(--range-track-inset) var(--range-fill, 0%),
+    var(--range-track-inset) 100%
+  );
+}
+
+input[type="range"]:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* WebKit's in-field caps-lock badge renders squeezed in our tall password
+   fields and crowds the lock glyph; macOS already shows its own caps-lock
+   indicator at the cursor. display: none has no effect on this pseudo-element
+   in Safari, so collapse it instead. */
+input::-webkit-caps-lock-indicator {
+  visibility: hidden;
+  width: 0;
+  height: 0;
+  margin: 0;
+  flex: none;
+}
+
+/* Frameless window drag region */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+[data-tauri-drag-region] button {
+  -webkit-app-region: no-drag;
+}
+
+/* Champagne gold shimmer sweep for CTA buttons */
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(200%) skewX(-15deg); }
+}
+
+/* Onboarding Enhance intro carousel: the current dot fills over the dwell;
+   its animationend advances the slide (EnhancePreviewCarousel). */
+@keyframes enhance-dwell {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* Gold pulse for trial strip warning */
+@keyframes gold-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* Subtle gold focus glow */
+@keyframes gold-focus-wash {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Approved Agents page rhythm and speech-to-mark completion. */
+.agents-settings section > div:not(:first-child) { margin-block: 8px; }
+.agents-settings section > .flex { min-height: 44px; }
+@keyframes agent-working-wave { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1); } }
+@keyframes agents-voice-wave { 0%, 100% { transform: scaleY(.55); } 50% { transform: scaleY(1); } }
+@keyframes agents-logo-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes agents-logo-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 700px) { .agents-settings section > .flex { flex-wrap: wrap; } }
+
+/* ============================================================================
+   HUD agent Markdown (pages/hud/components/MarkdownText.tsx)
+   ----------------------------------------------------------------------------
+   Element-only rendering of agent text in the HUD console, summary and pill.
+   Size and line height come from the component; these rules only space blocks
+   and style code and lists. The --hud-* tokens live in the HUD palettes
+   (pages/hud/material.ts); fallbacks keep the rules safe outside the HUD.
+   ========================================================================== */
+.hud-markdown {
+  color: var(--color-slate);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.hud-markdown > * { margin: 0; }
+.hud-markdown > * + * { margin-top: 8px; }
+.hud-markdown strong { font-weight: 600; }
+.hud-markdown em { font-style: italic; }
+.hud-markdown .hud-md-heading { font-size: inherit; font-weight: 600; }
+.hud-markdown code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--hud-code-bg, var(--surface-control));
+  border: 1px solid var(--border-hairline);
+}
+.hud-markdown pre {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--hud-code-bg, var(--surface-control));
+  border: 1px solid var(--border-hairline);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+.hud-markdown > pre { margin-top: 10px; }
+.hud-markdown > pre:first-child { margin-top: 0; }
+.hud-markdown pre code {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 11.5px;
+  line-height: 1.55;
+  white-space: pre;
+}
+.hud-markdown ul,
+.hud-markdown ol { padding-left: 18px; }
+.hud-markdown ul { list-style: disc outside; }
+.hud-markdown ol { list-style: decimal outside; }
+.hud-markdown li { margin: 3px 0; padding-left: 2px; }
+.hud-markdown li::marker { color: var(--hud-frost-deep, var(--color-frost-deep)); }
+.hud-markdown li > ul,
+.hud-markdown li > ol { margin-top: 3px; }
+.hud-markdown blockquote {
+  padding-left: 10px;
+  border-left: 2px solid var(--divider);
+  color: var(--color-steel);
+}
+.hud-markdown hr {
+  height: 1px;
+  border: 0;
+  background: var(--divider);
+}
+
+/* HUD reply rail field (pages/hud/components/ReplyRail.tsx). The field is the
+   focus target: the textarea keeps no outline of its own and the field draws
+   the app's single frost focus outline, like .frost-field-group. */
+.hud-reply-field:has(textarea:focus-visible) {
+  outline: 2px solid var(--color-frost);
+  outline-offset: 2px;
+}
+.hud-reply-field textarea:focus-visible {
+  outline: none;
+}
+/* Not on the glance card: its whole text opens typing and the hint says so,
+   so a box around the hint line only read as a stray small input. */
+.hud-reply-field[data-framed="false"][data-click-to-edit="true"]:hover:not([data-console="false"] *) {
+  border-color: var(--border-hairline) !important;
+}
+.hud-reply-field textarea::placeholder {
+  color: var(--color-steel);
+  opacity: 0.75;
+}

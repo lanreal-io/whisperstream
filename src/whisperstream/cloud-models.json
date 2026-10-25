@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "providers": {
+    "gemini": [
+      {
+        "id": "gemini-3.5-flash-lite",
+        "label": "Gemini 3.5 Flash-Lite",
+        "recommended": true
+      },
+      {
+        "id": "gemini-3.7-flash",
+        "label": "Gemini 3.7 Flash"
+      }
+    ],
+    "openai": [
+      {
+        "id": "gpt-5.6-luna",
+        "label": "GPT-5.6 Luna",
+        "recommended": true
+      },
+      {
+        "id": "gpt-5.6-terra",
+        "label": "GPT-5.6 Terra"
+      },
+      {
+        "id": "gpt-6-luna",
+        "label": "GPT-6 Luna",
+        "minimum_app_version": "2.0.0"
+      }
+    ],
+    "anthropic": [
+      {
+        "id": "claude-haiku-4-5-20251001",
+        "label": "Claude Haiku 4.5",
+        "recommended": true
+      },
+      {
+        "id": "claude-sonnet-5",
+        "label": "Claude Sonnet 5"
+      },
+      {
+        "id": "claude-haiku-5-5",
+        "label": "Claude Haiku 5.5",
+        "minimum_app_version": "2.0.0"
+      }
+    ]
+  }
+}

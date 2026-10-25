@@ -1,0 +1,36 @@
+name: Request a feature
+description: Suggest an idea or improvement for Whisperstream.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Whisperstream is a spare-time project, so I can't promise to build it, but I'll look at it when I can.
+
+        Please search [existing issues](https://github.com/lanreal-io/whisperstream/issues) first. If someone has already asked for the same thing, add your use case there.
+
+        Issues and attachments are public. Don't include API keys, transcripts, recordings or personal information. No logs are needed.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: Describe the problem or situation, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What would help?
+      description: Describe what you'd like Whisperstream to do.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds you've tried
+      description: Optional.
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Optional. Add any other context, such as the apps you dictate into.

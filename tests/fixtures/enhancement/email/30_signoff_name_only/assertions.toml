@@ -1,0 +1,6 @@
+must_contain = [
+    "great work",
+    "everyone",
+]
+must_not_contain = []
+greeting = "none"

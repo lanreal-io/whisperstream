@@ -1,0 +1,1 @@
+The api key is stored in.env and we read it via process.env.api key.

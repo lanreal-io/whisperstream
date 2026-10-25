@@ -1,0 +1,7 @@
+must_contain = [
+    "budget got approved",
+    "two new contractors",
+    "back on track",
+]
+must_not_contain = []
+greeting = "none"

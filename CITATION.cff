@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use Whisperstream in research, please cite it using this metadata."
+type: software
+title: Whisperstream
+version: 2.0.0
+license: GPL-3.0-only
+abstract: "Local dictation for Windows with optional text enhancement and speech playback."
+authors:
+  - name: "Lanreal Technologies Inc."
+references:
+  - type: software
+    title: Chirp
+    authors:
+      - family-names: Hampson
+        given-names: Will
+        website: https://github.com/whamp
+    notes: "MIT-licensed upstream project. Original copyright notice retained in LICENSES/Chirp-MIT.txt."

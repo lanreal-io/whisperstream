@@ -1,0 +1,137 @@
+name: convention-check
+run-name: ${{ github.workflow }} / ${{ inputs.ci_base_sha || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_head_sha:
+        description: Expected PR head SHA (set by merge_check.py)
+        type: string
+        default: ''
+      ci_base_sha:
+        description: Validated target SHA (set by merge_check.py)
+        type: string
+        default: ''
+
+concurrency:
+  group: convention-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  convention-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Require the dispatched commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.ci_head_sha }}
+        run: |
+          if [ -n "$EXPECTED_SHA" ] && [ "$EXPECTED_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::PR head changed before dispatch. Validate the new head."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install gitleaks
+        run: |
+          GITLEAKS_VERSION="8.30.1"
+          GITLEAKS_SHA256="551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+          TOOL_DIR="$(mktemp -d "${RUNNER_TEMP}/gitleaks.XXXXXX")"
+          curl --fail --show-error --silent --location --proto '=https' --tlsv1.2 \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            --output "${TOOL_DIR}/gitleaks.tar.gz"
+          printf '%s  %s\n' "${GITLEAKS_SHA256}" "${TOOL_DIR}/gitleaks.tar.gz" | sha256sum --check --strict
+          tar -xz -C "${TOOL_DIR}" -f "${TOOL_DIR}/gitleaks.tar.gz" gitleaks
+          echo "${TOOL_DIR}" >> "${GITHUB_PATH}"
+          "${TOOL_DIR}/gitleaks" version
+
+      - name: Audit complete candidate and outgoing history
+        env:
+          BASE_SHA: ${{ inputs.ci_base_sha }}
+          # Stable reviewed ancestry boundary, also used by local controls.
+          # Feature commits may predate a later target merged into their branch.
+          SOURCE_BASE: f86666e9c1d5fd2e710212095428e9fb6d5e79df
+        run: |
+          test -n "$BASE_SHA"
+          git merge-base --is-ancestor "$BASE_SHA" HEAD
+          # The head's own checker and policy. Control changes are approved on
+          # the private side before the port; the installed local snapshot
+          # refuses pushes with unreviewed control bytes. Generated PDF hashes
+          # come from scripts/generated-assets.json in each audited tree.
+          python -I scripts/source_policy.py --repo . \
+            --policy scripts/source-policy.json \
+            --receipt "${RUNNER_TEMP}/source-audit.json" \
+            range --base "$BASE_SHA" --head HEAD --source-base "$SOURCE_BASE"
+
+      - name: Read proposed PR metadata
+        env:
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X GET "repos/${GITHUB_REPOSITORY}/pulls" \
+            -f state=open -f "head=${GITHUB_REPOSITORY%%/*}:${BRANCH}" \
+            --jq '[.[] | {title, body, head: .head.ref, base: .base.ref}]' \
+            > "${RUNNER_TEMP}/source-pr-metadata.json"
+
+      - name: Audit PR metadata without publishing credentials
+        run: |
+          python -I scripts/source_policy.py --repo . \
+            --policy scripts/source-policy.json \
+            metadata --file "${RUNNER_TEMP}/source-pr-metadata.json"
+
+      - name: Branch name convention (warning)
+        env:
+          BRANCH: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          REGEX='^(app|site|chore|feature|fix|bugfix|hotfix)/[a-z0-9._-]+$'
+          if [[ ! "$BRANCH" =~ $REGEX ]]; then
+            echo "::warning::Branch name '$BRANCH' does not match convention. Prefer app/, site/, or chore/ prefixes (see CONTRIBUTING.md). Grandfathered: feature/, fix/, bugfix/, hotfix/."
+          else
+            echo "Branch name '$BRANCH' matches convention."
+          fi
+
+      - name: PR title convention (warning)
+        env:
+          BRANCH: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          OWNER="${GITHUB_REPOSITORY%%/*}"
+          TITLE=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${OWNER}:${BRANCH}" \
+            --jq '.[0].title // ""')
+          if [ -z "$TITLE" ]; then
+            echo "::warning::No open pull request found for branch '$BRANCH'; PR title convention was not checked."
+            exit 0
+          fi
+          REGEX='^\[(app|site|chore)\] .+'
+          if [[ ! "$TITLE" =~ $REGEX ]]; then
+            echo "::warning::PR title '$TITLE' does not start with [app], [site], or [chore] tag (see CONTRIBUTING.md)."
+          else
+            echo "PR title matches convention."
+          fi
+
+      - name: Required license notices
+        run: |
+          test -s LICENSE
+          test -s LICENSES/Chirp-MIT.txt
+          test -s NOTICE
+          test -s AUTHORS.md
+
+      - name: Set up uv for CI tooling tests
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Test merge selection and evidence guards
+        # Standalone tooling tests do not import Windows app dependencies.
+        run: uv --no-config run --no-project --with pytest==8.4.2 python -m pytest -c /dev/null -p no:cacheprovider --confcutdir=scripts/ci/tests scripts/ci/tests -q

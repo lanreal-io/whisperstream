@@ -1,0 +1,6 @@
+must_contain = [
+    "milk",
+    "eggs",
+    "bread",
+]
+must_not_contain = []

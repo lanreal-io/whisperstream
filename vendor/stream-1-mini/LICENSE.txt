@@ -1,0 +1,66 @@
+Stream-1 Mini License, Version 1.0
+
+Copyright 2026 Lanreal Technologies Inc., to the extent copyright subsists
+in its contributions.
+
+Stream-1 Mini is a modified model based on Qwen/Qwen3-0.6B-Base.
+The upstream work is Copyright 2024 Alibaba Cloud and is licensed under
+the Apache License, Version 2.0. A complete copy of that license is included
+in LICENSE-APACHE-2.0 and forms part of this license.
+
+1. License grant
+
+Lanreal Technologies Inc. licenses its contributions and the combined
+Stream-1 Mini model under the Apache License, Version 2.0, together with
+the additional identification condition below. This grant permits personal
+and commercial use, modification, redistribution, and integration into
+products and services, subject to these terms. No royalty or registration
+is required. The Apache patent grant, patent-litigation termination,
+warranty disclaimer, and limitation of liability apply as stated there.
+
+2. Identification condition
+
+When using, distributing, or integrating Stream-1 Mini, including a
+modified version or a model derived from it, you must retain a reasonably
+accessible identification of its origin as "Stream-1 Mini" by
+"Whisperstream", using that spelling and capitalization.
+
+For a product or service, the identification may appear in its model
+description, documentation, About screen, or third-party notices. For
+distributed model files, include it in the accompanying model card or
+notices. Private use may satisfy this condition by retaining the supplied
+notices with the model. No attribution is required in each generated
+output. You may market your product or modified model under another name.
+
+Identify modified versions as modified or derived; do not represent them
+as an official, unmodified Whisperstream release. A suitable statement is:
+"Derived from Stream-1 Mini by Whisperstream. Modified by [your name]."
+
+This condition applies to Lanreal's contributions and the combined model
+as licensed here. It does not restrict rights independently granted in
+the original Qwen work under Apache-2.0, or apply to an independently
+created model that does not include Lanreal's contributions.
+
+3. Notices and trademarks
+
+Preserve the applicable copyright, license, modification, and attribution
+notices required by Apache-2.0. Include this license, LICENSE-APACHE-2.0,
+and the applicable NOTICE when redistributing the model or a derivative.
+
+You may use the names Stream-1 Mini and Whisperstream to provide the
+required truthful attribution. No logo license, endorsement, sponsorship,
+or broader trademark license is granted. The identification condition
+does not require you to imply any such relationship.
+
+4. Scope
+
+This license covers the model weights and the accompanying configuration,
+tokenizer modifications, template, prompts, and documentation to the
+extent Lanreal has rights to license them. Upstream components retain
+their own notices and rights. It does not license private training data,
+recordings, research records, or third-party services. It does not
+represent that generated outputs are accurate, unique, or free of
+third-party rights.
+
+This is a custom license with an additional identification condition.
+It must not be represented as unmodified Apache-2.0.

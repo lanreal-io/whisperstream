@@ -1,0 +1,7 @@
+must_contain = [
+    "coffees",
+]
+must_not_contain = [
+    "two coffees",
+    "make that",
+]

@@ -1,0 +1,20 @@
+Stream-1 Mini by Whisperstream
+Copyright 2026 Lanreal Technologies Inc., to the extent copyright subsists
+in its contributions.
+
+Based on Qwen/Qwen3-0.6B-Base, Copyright 2024 Alibaba Cloud.
+Upstream revision: da87bfb608c14b7cf20ba1ce41287e8de496c0cd
+https://huggingface.co/Qwen/Qwen3-0.6B-Base/tree/da87bfb608c14b7cf20ba1ce41287e8de496c0cd
+
+Changes by Lanreal: task-specific supervised fine-tuning for dictation
+cleanup, merged adapter weights, separately retained embedding and output
+weights, a plain ChatML template without a thinking preamble, associated
+configuration and prompts, and GGUF conversion/quantization.
+
+The weights, configuration and tokenizer distribution are modified from
+the original upstream distribution. The original Apache-2.0 license is
+provided in LICENSE-APACHE-2.0. Stream-1 Mini's additional identification
+condition appears in LICENSE, not in this informational notice.
+
+Qwen and Alibaba Cloud are credited as upstream sources. Their names do
+not imply endorsement of this release.

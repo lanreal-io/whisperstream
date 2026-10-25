@@ -1,0 +1,8 @@
+{
+  "hook_event_name": "UserPromptExpansion",
+  "session_id": "fixture-activation-session",
+  "expansion_type": "slash_command",
+  "command_source": "plugin",
+  "command_name": "whisperstream:speak",
+  "prompt": "/whisperstream:speak"
+}

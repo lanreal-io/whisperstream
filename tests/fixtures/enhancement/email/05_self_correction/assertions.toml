@@ -1,0 +1,8 @@
+must_contain = [
+    "Wednesday",
+    "announcement",
+]
+must_not_contain = [
+    "Tuesday",
+]
+greeting = "none"

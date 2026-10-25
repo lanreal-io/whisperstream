@@ -1,0 +1,26 @@
+{
+  "productName": "Whisperstream Native UI Test",
+  "identifier": "com.whisperstream.app.native-ui-test",
+  "build": {
+    "frontendDist": "../frontend/dist-native-ui-test"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "capabilities": [
+        "default",
+        {
+          "identifier": "native-ui-test",
+          "description": "Debug-only WebdriverIO permissions for the native UI middle lane",
+          "windows": ["main", "hud"],
+          "permissions": ["wdio:default", "wdio-webdriver:default"]
+        }
+      ]
+    }
+  },
+  "bundle": {
+    "active": false,
+    "externalBin": [],
+    "resources": []
+  }
+}

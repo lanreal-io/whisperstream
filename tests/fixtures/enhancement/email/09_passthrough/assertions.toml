@@ -1,0 +1,6 @@
+must_contain = [
+    "slides",
+    "review them tonight",
+]
+must_not_contain = []
+greeting = "Hi,"

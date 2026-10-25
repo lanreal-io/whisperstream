@@ -1,0 +1,7 @@
+must_contain = [
+    "coffee",
+    "next week",
+    "afternoons",
+]
+must_not_contain = []
+greeting = "none"

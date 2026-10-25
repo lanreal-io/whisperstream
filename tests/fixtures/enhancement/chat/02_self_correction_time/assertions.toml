@@ -1,0 +1,9 @@
+must_contain = [
+    "6",
+    "coffee place",
+]
+must_not_contain = [
+    "five",
+    "six",
+    "no wait",
+]

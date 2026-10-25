@@ -1,0 +1,11 @@
+must_contain = [
+    "15.2",
+    "App Router",
+    "React 19",
+]
+must_not_contain = [
+    "fifteen point two",
+    "React19",
+    "app router",
+]
+case_sensitive = true

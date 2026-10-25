@@ -1,0 +1,7 @@
+must_contain = [
+    "thing is",
+    "tonight",
+]
+must_not_contain = [
+    "Okay, so the thing",
+]

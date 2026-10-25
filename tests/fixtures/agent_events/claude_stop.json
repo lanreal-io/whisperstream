@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "Stop",
+  "last_assistant_message": "{\"fixture\":\"LEGITIMATE_JSON_LITERAL\"}",
+  "session_id": "fixture-claude-session",
+  "prompt_id": "fixture-claude-prompt",
+  "cwd": "C:\\synthetic-root\\synthetic-project",
+  "transcript_path": "C:\\synthetic-root\\private\\claude.jsonl",
+  "stop_hook_active": false
+}

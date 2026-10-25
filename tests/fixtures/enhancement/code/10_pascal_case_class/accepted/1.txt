@@ -1,0 +1,1 @@
+UserService extends BaseService and overrides the create method.

@@ -1,0 +1,6 @@
+must_contain = [
+    "threshold",
+    "32 to 64",
+]
+must_not_contain = []
+greeting = "none"

@@ -1,0 +1,7 @@
+must_contain = [
+    "API migration",
+    "UI refactor",
+    "testing kicks off Monday",
+]
+must_not_contain = []
+greeting = "Hi team,"

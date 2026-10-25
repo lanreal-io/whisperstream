@@ -1,0 +1,7 @@
+must_contain = [
+    "Thursday afternoon",
+    "numbers",
+]
+must_not_contain = [
+    "PM",
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "filename": "sherpa_onnx-1.13.3+whisperstream.2-cp312-cp312-win_amd64.whl",
+    "sha256": "aac6fb04491ca8eb9e212e3bebf7182dc131b87e0572d5c92a011edb7cefc4af",
+    "size": 9309567
+  },
+  {
+    "filename": "sherpa_onnx-1.13.3+whisperstream.2-cp313-cp313-win_amd64.whl",
+    "sha256": "8a06e4847d9ef57046723a3e24415c09c537131c638721235feb4ef6ea3922f7",
+    "size": 9309390
+  },
+  {
+    "filename": "sherpa_onnx-1.13.3+whisperstream.2-cp314-cp314-win_amd64.whl",
+    "sha256": "6ef233d20c8814c239a7d572a856d50704d284806c6fa6ffa3b190be795c614a",
+    "size": 9567960
+  }
+]

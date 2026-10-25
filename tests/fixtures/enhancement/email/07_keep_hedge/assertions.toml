@@ -1,0 +1,6 @@
+must_contain = [
+    "second design",
+    "hear what you think",
+]
+must_not_contain = []
+greeting = "none"

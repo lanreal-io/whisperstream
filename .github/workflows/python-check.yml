@@ -1,0 +1,59 @@
+name: python-check
+run-name: ${{ github.workflow }} / ${{ inputs.ci_base_sha || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_head_sha:
+        description: Expected PR head SHA (set by merge_check.py)
+        type: string
+        default: ''
+      ci_base_sha:
+        description: Validated target SHA (set by merge_check.py)
+        type: string
+        default: ''
+
+concurrency:
+  group: python-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Require the dispatched commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.ci_head_sha }}
+        run: |
+          if [ -n "$EXPECTED_SHA" ] && [ "$EXPECTED_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::PR head changed before dispatch. Validate the new head."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked dependencies
+        run: uv sync --locked --extra dev --python 3.13
+
+      - name: Verify public native dependencies
+        run: uv run --locked python scripts/check-sherpa-source.py
+
+      - name: Test
+        run: uv run pytest tests/ --ignore=tests/e2e/ -q -n auto

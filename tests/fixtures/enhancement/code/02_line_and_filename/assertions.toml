@@ -1,0 +1,7 @@
+must_contain = [
+    "user_service.py",
+]
+must_not_contain = [
+    "user service.py",
+]
+case_sensitive = true

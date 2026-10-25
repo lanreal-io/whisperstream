@@ -1,0 +1,15 @@
+schema = 1
+scope = "internal-non-distributed-macos-stt-prototype"
+
+[[dependency]]
+name = "FluidAudio"
+source = "https://github.com/FluidInference/FluidAudio.git"
+revision = "56607d90b97de7d95a731200563bf49aa5beef20"
+swift_fluidaudio_version = "0.14.8"
+declared_license = "Apache-2.0"
+tracked_license_text = true
+distribution_status = "NOT_REVIEWED_FOR_SHIPPING"
+
+[owned_bridge]
+path = "swift/WhisperstreamAsrBridge.swift"
+implementation = "Original Whisperstream cached-only ASR FFI; no fluidaudio-rs implementation is copied or linked."

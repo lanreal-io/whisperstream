@@ -1,0 +1,8 @@
+must_contain = [
+    "kickoff",
+    "Friday",
+    "9 AM",
+    "calendar invite",
+]
+must_not_contain = []
+greeting = "Hi Carlos,"

@@ -1,0 +1,6 @@
+must_contain = [
+    "James",
+]
+must_not_contain = [
+    "John",
+]

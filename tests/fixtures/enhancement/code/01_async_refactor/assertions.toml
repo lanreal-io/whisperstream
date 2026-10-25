@@ -1,0 +1,7 @@
+must_contain = [
+    "async/await",
+]
+must_not_contain = [
+    "async oight",
+]
+case_sensitive = true

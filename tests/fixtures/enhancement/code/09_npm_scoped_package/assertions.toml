@@ -1,0 +1,9 @@
+must_contain = [
+    "@tanstack/react-query",
+    "App.tsx",
+]
+must_not_contain = [
+    "at tanstack",
+    "app.tsx",
+]
+case_sensitive = true

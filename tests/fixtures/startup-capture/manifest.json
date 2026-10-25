@@ -1,0 +1,71 @@
+{
+  "generator": "generate_startup_capture_fixture.py",
+  "engine": "kokoro",
+  "voice": "af_heart",
+  "words": [
+    "one",
+    "two",
+    "three",
+    "four",
+    "five"
+  ],
+  "expected": "one two three four five",
+  "sample_rate": 16000,
+  "gap_ms": 0,
+  "relative_threshold_db": -42.0,
+  "leading_silence_samples": 0,
+  "combined_samples": 36599,
+  "combined_sha256": "3af0a0a6a1f82f5aad44e57f4c91770776ba1bbfc956b54b5c4c79a619b9f496",
+  "segments": [
+    {
+      "word": "one",
+      "source_sample_rate": 24000,
+      "source_samples": 30000,
+      "trim_start_sample": 9451,
+      "trim_end_sample": 19569,
+      "threshold": 0.004176719813323782,
+      "trimmed_samples_16khz": 6746,
+      "sha256": "c19718b3f3bda0af282795898ca376bac66d276bc01789d66c275cde3bbb4213"
+    },
+    {
+      "word": "two",
+      "source_sample_rate": 24000,
+      "source_samples": 31200,
+      "trim_start_sample": 9404,
+      "trim_end_sample": 20005,
+      "threshold": 0.0035256072527557213,
+      "trimmed_samples_16khz": 7068,
+      "sha256": "202993b96aabdcdad27f2a1fb10d0641851c0be3d1c4f5bfe2426768a0f9ccbd"
+    },
+    {
+      "word": "three",
+      "source_sample_rate": 24000,
+      "source_samples": 32400,
+      "trim_start_sample": 8959,
+      "trim_end_sample": 20352,
+      "threshold": 0.00421332368400352,
+      "trimmed_samples_16khz": 7596,
+      "sha256": "04754e3443839be37d106f367cfca9228d5db8cc41d8ed0f95174e37748716b6"
+    },
+    {
+      "word": "four",
+      "source_sample_rate": 24000,
+      "source_samples": 31800,
+      "trim_start_sample": 8911,
+      "trim_end_sample": 19977,
+      "threshold": 0.00412072316347597,
+      "trimmed_samples_16khz": 7378,
+      "sha256": "df03c2ce3e5b0faeebb48e09c048767c7a358fd0944642349842bbdde18491ce"
+    },
+    {
+      "word": "five",
+      "source_sample_rate": 24000,
+      "source_samples": 32400,
+      "trim_start_sample": 9121,
+      "trim_end_sample": 20837,
+      "threshold": 0.005424160333310096,
+      "trimmed_samples_16khz": 7811,
+      "sha256": "45bf7076af3038f8f875ea0648c80f1b1f212b30dcb8ec7e6ac0aa44dba0567d"
+    }
+  ]
+}

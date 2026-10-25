@@ -1,0 +1,56 @@
+name: docs-check
+run-name: ${{ github.workflow }} / ${{ inputs.ci_base_sha || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_head_sha:
+        description: Expected PR head SHA (set by merge_check.py)
+        type: string
+        default: ''
+      ci_base_sha:
+        description: Validated target SHA (set by merge_check.py)
+        type: string
+        default: ''
+
+concurrency:
+  group: docs-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require the dispatched commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.ci_head_sha }}
+        run: |
+          if [ -n "$EXPECTED_SHA" ] && [ "$EXPECTED_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::PR head changed before dispatch. Validate the new head."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: docs/offline/toolchain/package-lock.json
+
+      - name: Install dependencies
+        working-directory: docs/offline/toolchain
+        run: npm ci
+
+      - name: Validate bundled documentation and source links
+        run: npm --prefix docs/offline/toolchain run docs:check
+
+      - name: Verify complete bundle inventory
+        run: node scripts/check-offline-docs.mjs

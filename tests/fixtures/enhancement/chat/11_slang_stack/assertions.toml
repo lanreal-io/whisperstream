@@ -1,0 +1,9 @@
+must_contain = [
+    "omw",
+    "brb",
+    "gotta",
+]
+must_not_contain = [
+    "on my way",
+    "be right back",
+]

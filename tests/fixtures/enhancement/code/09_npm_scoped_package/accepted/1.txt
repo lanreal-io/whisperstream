@@ -1,0 +1,1 @@
+npm install @tanstack/react-query and add the provider to App.tsx.

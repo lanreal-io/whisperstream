@@ -1,0 +1,19 @@
+{
+  "model": "Stream-1 Mini by Whisperstream",
+  "license": "LicenseRef-Stream-1-Mini-License-1.0",
+  "license_name": "stream-1-mini-license",
+  "license_description": "Stream-1 Mini License, Version 1.0: Apache-2.0 with an identification condition; includes the Apache License 2.0 for Qwen/Qwen3-0.6B-Base",
+  "repository": "whisperstream/stream-1-mini",
+  "revision": "ee30dd90bd346d781d0e420d3c6c23244798e7b9",
+  "file": "stream-1-mini-vocabulary-q4_k_m.gguf",
+  "sha256": "32bef61bdbc98787ac278d96a2aad120a9fc61f588f1f0a4746441e9d6d89ae7",
+  "size_bytes": 484215648,
+  "delivery": "Direct pinned Hugging Face download; no automatic backup source.",
+  "base_model": "Qwen/Qwen3-0.6B-Base",
+  "base_revision": "da87bfb608c14b7cf20ba1ce41287e8de496c0cd",
+  "base_copyright": "Copyright 2024 Alibaba Cloud",
+  "publisher_copyright": "Copyright 2026 Lanreal Technologies Inc.",
+  "license_sha256": "866a266db7b6bd114248b19320437db91816a16365e986038e31fa708056e9da",
+  "notice_sha256": "9880cfde6f96ee18ad29574a8f3243c7f6bf513efbd77ca844265725e157a22a",
+  "evidence": "LICENSE and NOTICE retrieved from the pinned revision and byte-verified 2026-10-24; revision, file, size and SHA-256 match src/whisperstream/model_sources.py."
+}

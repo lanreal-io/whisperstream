@@ -1,0 +1,9 @@
+must_contain = [
+    "confirm the venue",
+    "finalize the headcount",
+]
+must_not_contain = [
+    "couple of things",
+    "first",
+    "second",
+]

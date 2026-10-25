@@ -1,0 +1,11 @@
+{
+  "session_id": "fixture-codex-session",
+  "transcript_path": "C:/private/codex-transcript.jsonl",
+  "cwd": "C:/Users/USERNAME/Documents/Dev/whisperstream",
+  "hook_event_name": "Stop",
+  "model": "gpt-5.6-codex",
+  "permission_mode": "default",
+  "turn_id": "fixture-codex-turn",
+  "stop_hook_active": false,
+  "last_assistant_message": "Codex finished the change.\n🔊 Codex finished the change."
+}

@@ -1,0 +1,14 @@
+{
+  "session_id": "fixture-codex-permission",
+  "transcript_path": "C:/private/codex-transcript.jsonl",
+  "cwd": "C:/Users/USERNAME/Documents/Dev/whisperstream",
+  "hook_event_name": "PermissionRequest",
+  "model": "gpt-5.6-codex",
+  "permission_mode": "default",
+  "turn_id": "fixture-codex-permission-turn",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "PRIVATE_CODEX_TOOL_INPUT",
+    "description": "Run the focused test suite"
+  }
+}

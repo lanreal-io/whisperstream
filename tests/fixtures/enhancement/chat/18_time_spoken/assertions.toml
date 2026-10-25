@@ -1,0 +1,7 @@
+must_contain = [
+    "9:30",
+    "AM",
+]
+must_not_contain = [
+    "in the morning",
+]

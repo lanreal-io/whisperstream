@@ -1,0 +1,11 @@
+must_contain = [
+    "userProfile",
+    "fetchUserById",
+]
+must_not_contain = [
+    "Camelcase",
+    "camelcase",
+    "user profile",
+    "Fetch User",
+]
+case_sensitive = true

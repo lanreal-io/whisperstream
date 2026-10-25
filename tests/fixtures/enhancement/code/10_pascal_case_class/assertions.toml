@@ -1,0 +1,11 @@
+must_contain = [
+    "UserService",
+    "BaseService",
+]
+must_not_contain = [
+    "Pascal case",
+    "pascal case",
+    "user service",
+    "base service",
+]
+case_sensitive = true

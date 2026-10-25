@@ -1,0 +1,11 @@
+must_contain = [
+    "JSON",
+    "REST",
+    "404",
+]
+must_not_contain = [
+    "json schema",
+    "rest endpoint",
+    "user id",
+]
+case_sensitive = true

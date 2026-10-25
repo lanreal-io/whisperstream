@@ -1,0 +1,92 @@
+name: frontend-check
+run-name: ${{ github.workflow }} / ${{ inputs.ci_base_sha || 'manual' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ci_head_sha:
+        description: Expected PR head SHA (set by merge_check.py)
+        type: string
+        default: ''
+      ci_base_sha:
+        description: Validated target SHA (set by merge_check.py)
+        type: string
+        default: ''
+
+concurrency:
+  group: frontend-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Require the dispatched commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.ci_head_sha }}
+        run: |
+          if [ -n "$EXPECTED_SHA" ] && [ "$EXPECTED_SHA" != "$GITHUB_SHA" ]; then
+            echo "::error::PR head changed before dispatch. Validate the new head."
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up uv for offline legal PDFs
+        # PDF regeneration is independent of the Windows backend/native wheels.
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Force-install Linux x64 GNU native bindings (npm bug 4828)
+        working-directory: frontend
+        # `npm ci` skips platform-matched optional native deps even when
+        # present in the lockfile (npm bug #4828). Force-install each one
+        # at the exact version pinned in the lockfile via `npm install
+        # --no-save`. Versions are extracted from package-lock.json so
+        # they stay in sync when deps are bumped. Update the PACKAGES list
+        # when adding new top-level deps with platform-specific natives
+        # (vite -> rollup, esbuild, tailwindcss v4 -> oxide + lightningcss,
+        # @tauri-apps/cli are the current set).
+        run: |
+          PACKAGES=(
+            "@esbuild/linux-x64"
+            "@rollup/rollup-linux-x64-gnu"
+            "@tailwindcss/oxide-linux-x64-gnu"
+            "lightningcss-linux-x64-gnu"
+            "@tauri-apps/cli-linux-x64-gnu"
+          )
+          INSTALL_LIST=()
+          for pkg in "${PACKAGES[@]}"; do
+            VERSION=$(jq -r --arg p "node_modules/$pkg" '.packages[$p].version // empty' package-lock.json)
+            if [ -z "$VERSION" ]; then
+              echo "::error::Package $pkg not found in package-lock.json. Update the PACKAGES list in this workflow or regenerate the lockfile."
+              exit 1
+            fi
+            INSTALL_LIST+=("$pkg@$VERSION")
+          done
+          echo "Installing pinned native bindings: ${INSTALL_LIST[*]}"
+          npm install --no-save "${INSTALL_LIST[@]}"
+
+      - name: Test
+        working-directory: frontend
+        run: npm test
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build

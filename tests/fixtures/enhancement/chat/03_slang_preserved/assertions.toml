@@ -1,0 +1,8 @@
+must_contain = [
+    "Lol",
+    "ngl",
+]
+must_not_contain = [
+    "that's that's",
+    "Ng L",
+]

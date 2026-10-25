@@ -1,0 +1,10 @@
+must_contain = [
+    "Fix null check",
+    "auth handler",
+]
+must_not_contain = [
+    "Fixed null",
+    "Fixes null",
+    "Fixing null",
+]
+case_sensitive = true

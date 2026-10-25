@@ -1,0 +1,8 @@
+must_contain = [
+    "Wednesday",
+    "board deck",
+]
+must_not_contain = [
+    "Tuesday",
+]
+greeting = "Hey Lisa,"

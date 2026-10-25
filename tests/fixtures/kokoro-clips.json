@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "generator": "scripts/generate_speech_fixture.py",
+  "engine": "kokoro",
+  "voice": "af_heart",
+  "sample_rate": 16000,
+  "channels": 1,
+  "clips": [
+    {
+      "path": "test.wav",
+      "text": "Hello. I'm speaking and this is a test audio file.",
+      "frames": 56800,
+      "sha256": "1f9c51065676ba172337ee5c6dc77ba6c413641a3530865cccfcd6781833d222"
+    },
+    {
+      "path": "enhancement/chat/02_self_correction_time/audio.wav",
+      "text": "Meet at five, no wait, six at the coffee place.",
+      "frames": 54400,
+      "sha256": "b094ed0a3b904bd15063cd589c963c4589bbe8d0cfe65f053d9c6f5e9b758465"
+    },
+    {
+      "path": "enhancement/chat/03_slang_preserved/audio.wav",
+      "text": "Lol, that's, that's actually pretty funny, N. G. L.",
+      "frames": 63200,
+      "sha256": "9844e2656de5cdbb42d79fd7654f032bcb4b7dd17bf95ce05da2fe860bc1fa0e"
+    },
+    {
+      "path": "enhancement/chat/04_contractions_preserved/audio.wav",
+      "text": "I'm gonna grab lunch, you wanna come?",
+      "frames": 40400,
+      "sha256": "6429fcc43b3542b9afb881dd78bf620b36fe5120ebd36a5d4bd935843d37e133"
+    },
+    {
+      "path": "enhancement/chat/05_filler_heavy/audio.wav",
+      "text": "Okay, so the thing is, I can't make it tonight, sorry.",
+      "frames": 57600,
+      "sha256": "cde7e4b5d5e166a610f828c58336ab06cd09d96b46424e83424426aa07118ce8"
+    },
+    {
+      "path": "enhancement/chat/06_repeated_word/audio.wav",
+      "text": "Yeah, yeah, yeah, totally agree.",
+      "frames": 39600,
+      "sha256": "45d0626bcd5b8d2a4bfe42e1726c6aefb72094f20e1dcf07e3ac6dfa06b48593"
+    },
+    {
+      "path": "enhancement/chat/07_meta_command_preserved/audio.wav",
+      "text": "Can you send this to John saying I'll be late?",
+      "frames": 44800,
+      "sha256": "a6ec0920867d11fe4d6bb31e06f4604829bff73af16a88f8fd3dd752bdacb20b"
+    },
+    {
+      "path": "enhancement/chat/08_correction_multiple/audio.wav",
+      "text": "The meeting tomorrow is moved to Tuesday, no, Wednesday at two PM.",
+      "frames": 74800,
+      "sha256": "924d01f9817df6f75e9df91899ea604524f6505ad1dcb3e8a11102904ce22bf9"
+    },
+    {
+      "path": "enhancement/chat/09_emotion_preserved/audio.wav",
+      "text": "Haha, that's wild, did you see the, the email from Sarah?",
+      "frames": 62000,
+      "sha256": "5ba1e69ed78f0301bb73bdcf72ee23ecf9d36f48cb0298f82668529bec9bfb21"
+    },
+    {
+      "path": "enhancement/chat/10_actually_emphasis/audio.wav",
+      "text": "I think it's fine, actually I love it.",
+      "frames": 44400,
+      "sha256": "564d144c4126628a5eb52366bd6640a8b47bfe5d9dce2a9f13e45a3584f1ddf3"
+    },
+    {
+      "path": "enhancement/chat/11_slang_stack/audio.wav",
+      "text": "O M W, B R B, gotta grab my keys.",
+      "frames": 59200,
+      "sha256": "ef93fee08fb2de941eac1ddb550da3d10e1604e46cc2af3c2883ab347752a2d3"
+    },
+    {
+      "path": "enhancement/chat/12_short_passthrough/audio.wav",
+      "text": "Sure.",
+      "frames": 20800,
+      "sha256": "58b6c0f78bc072e10c76370d41209e72e816455d15ea834a6a3188b42904485b"
+    },
+    {
+      "path": "enhancement/chat/13_sorry_correction/audio.wav",
+      "text": "Meeting is on Friday, sorry, Saturday.",
+      "frames": 48800,
+      "sha256": "0d24b2554a84408a2a7f545667f12bd1742b1c6fea9b4f2f81783326b5e53559"
+    },
+    {
+      "path": "enhancement/chat/14_list_numbered_explicit/audio.wav",
+      "text": "Okay, here's what I need to grab. One, milk. Two, eggs. Three, bread.",
+      "frames": 79200,
+      "sha256": "a599029b1ac026cb8226c189accb8f7636ee8203902f014dd4388e744c4be51c"
+    },
+    {
+      "path": "enhancement/chat/15_list_first_second_third/audio.wav",
+      "text": "First, I'll call the dentist, second, I'll book the flight, third, I'll email mom.",
+      "frames": 80400,
+      "sha256": "680b2ebcf8b4eb03ad0e8704afc14344f0a3d5370228590388d2cd4d299c7c86"
+    },
+    {
+      "path": "enhancement/chat/16_numbers_not_list/audio.wav",
+      "text": "I have two questions and three concerns about the proposal.",
+      "frames": 62800,
+      "sha256": "20131367054236dd4e2e6179e2409ccbd3d9a2d04c6599f08e65bc7d15e34f6c"
+    },
+    {
+      "path": "enhancement/chat/17_date_spoken/audio.wav",
+      "text": "Let's do March third at noon.",
+      "frames": 35600,
+      "sha256": "d2453fcedae6319635e9c6f9bb66906a06061d45d4a3984596d473ceaeba3c39"
+    },
+    {
+      "path": "enhancement/chat/18_time_spoken/audio.wav",
+      "text": "The call is at nine thirty in the morning.",
+      "frames": 42000,
+      "sha256": "0070fdbc4a483ee58b68dd51a3b07ff7c8d71c9ebcf7f973cc25940d41701b2b"
+    },
+    {
+      "path": "enhancement/chat/19_i_mean_correction/audio.wav",
+      "text": "Send it to John, I mean James.",
+      "frames": 39600,
+      "sha256": "c0b5cf387c1e6e73afd4a5fe876c7098946e108c2abe9aa1b708f05a0fbe6b68"
+    },
+    {
+      "path": "enhancement/chat/20_scratch_that/audio.wav",
+      "text": "Buy milk, scratch that, buy oat milk.",
+      "frames": 42400,
+      "sha256": "04ea385957351fe8ecb6e4062d24f68c3475c75c980a192e428d5e5591d6bb24"
+    },
+    {
+      "path": "enhancement/chat/21_make_that/audio.wav",
+      "text": "Two coffees, make that three.",
+      "frames": 34400,
+      "sha256": "bbbb2f78499e1602bc952104b6dd1f456648a731933131b0a61e986b790ae3dd"
+    },
+    {
+      "path": "enhancement/chat/22_or_rather/audio.wav",
+      "text": "The client is Acme, or rather, Innotech.",
+      "frames": 46800,
+      "sha256": "a8114da91407c963bbe84713a24bdc29d529ea6e4db1350be2f83705eb3d1e5b"
+    },
+    {
+      "path": "enhancement/code/01_async_refactor/audio.wav",
+      "text": "Refactor the user auth middleware to use async await instead of callbacks.",
+      "frames": 83200,
+      "sha256": "b0562f12867fb0f2480c476c6cd84042a1202ba377e97e122ecbfac89aa6140c"
+    },
+    {
+      "path": "enhancement/code/02_line_and_filename/audio.wav",
+      "text": "The bug is in line forty two of user service dot py, where we're destructuring response data before checking if response is null.",
+      "frames": 138400,
+      "sha256": "7fe2655b62cc95c3ff329ce280d77fb7c1d0c301f24ec0f36793414988f87068"
+    },
+    {
+      "path": "enhancement/code/03_acronyms_and_status/audio.wav",
+      "text": "Add a JSON schema validator to the REST endpoint and return a four oh four if the user ID is missing.",
+      "frames": 112000,
+      "sha256": "a4adb4068b1b31c63ae62f3ace76b36598979046bf82f2ad62e938dbeb72ee21"
+    },
+    {
+      "path": "enhancement/code/04_camel_case/audio.wav",
+      "text": "Camel case user profile equals await fetch user by ID.",
+      "frames": 67600,
+      "sha256": "2a731fb7dd52a3f8588d45ff05b3b966c7cd4ffbf2aa244fe431ee1b4c78120b"
+    },
+    {
+      "path": "enhancement/code/05_snake_case/audio.wav",
+      "text": "Snake case auth middleware should wrap every handler in the API router.",
+      "frames": 75600,
+      "sha256": "c890d64f36f212a7f552446765757eb96f4c219a70534b42280173223c5b9c9e"
+    },
+    {
+      "path": "enhancement/code/06_operator_dot_then/audio.wav",
+      "text": "Use await instead of dot then and remove the nested callback.",
+      "frames": 68000,
+      "sha256": "72765407a8044d1e11a457ce5c65635abe42992db401cd2f7ca4a2e2fdc7cf50"
+    },
+    {
+      "path": "enhancement/code/07_version_numbers/audio.wav",
+      "text": "Bumping Next JS to fifteen point two and migrating the app router to React nineteen.",
+      "frames": 92400,
+      "sha256": "379dbf4312819e352807dcb7bfe2dfc3717d00f1f56bd19708f00883a3af5583"
+    },
+    {
+      "path": "enhancement/code/08_cicd_eslint/audio.wav",
+      "text": "The CI slash CD pipeline fails on the lint step because E S lint can't find the config.",
+      "frames": 102000,
+      "sha256": "57214a7c40003a10c2bfdbe115ab3d34355fe9d05262d17ee84044028d4b7c41"
+    },
+    {
+      "path": "enhancement/code/09_npm_scoped_package/audio.wav",
+      "text": "N P M install at TanStack slash React Query and add the provider to app dot TSX.",
+      "frames": 107200,
+      "sha256": "5300a8a84d933c31057d5bbb057d84c598880947f054f37a56d7dddbab5b0507"
+    },
+    {
+      "path": "enhancement/code/10_pascal_case_class/audio.wav",
+      "text": "Pascal case user service extends base service and overrides the create method.",
+      "frames": 89600,
+      "sha256": "f994f0243e885836f8a99d2de8c2d70440ae0d8348e04110ba3996f02f1c7001"
+    },
+    {
+      "path": "enhancement/code/11_env_constant/audio.wav",
+      "text": "The API key is stored in dot env and we read it via process dot env dot API key.",
+      "frames": 100400,
+      "sha256": "7b0d45a8502e6ca9288c84be6bf52d84e6774ee0c9c0944735a2a5a64b68e18f"
+    },
+    {
+      "path": "enhancement/code/12_no_casing_guess/audio.wav",
+      "text": "The username column has an index on it.",
+      "frames": 48400,
+      "sha256": "750ebdab1e1ce10f8ea938645de8c66ca835e5a3bc82b209dcd1ff8072d747c5"
+    },
+    {
+      "path": "enhancement/code/13_commit_terseness/audio.wav",
+      "text": "Fix null check in auth handler.",
+      "frames": 38800,
+      "sha256": "1bccc1f3a49954c70a7adb5c00cd7bd38f8f58e6f18984ce661b6a79ae1a18fb"
+    },
+    {
+      "path": "enhancement/code/14_that_should_be/audio.wav",
+      "text": "Set timeout to thirty, that should be sixty seconds.",
+      "frames": 56800,
+      "sha256": "34f0fe9bc35a9812507637063ae417ba4de7e96c4fb07303872e7073a9cda080"
+    }
+  ]
+}

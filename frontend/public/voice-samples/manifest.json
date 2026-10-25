@@ -1,0 +1,357 @@
+{
+  "schema_version": 1,
+  "text": "This is how your agent's replies will sound.",
+  "speed": 1.0,
+  "runtime": {
+    "sherpa-onnx": "1.13.8",
+    "sherpa-onnx-core": "1.13.8",
+    "numpy": "2.3.4",
+    "soundfile": "0.14.0"
+  },
+  "encoder": {
+    "format": "OGG",
+    "subtype": "VORBIS",
+    "libsndfile": "1.2.2"
+  },
+  "generation_code_sha256": {
+    "scripts/generate-voice-samples.py": "c206981630dfe50bccaa76fc2dd0d810dec149812475e999f5e80daff15918a6",
+    "src/whisperstream/speech/controller.py": "2c2d600ec75cd1325e82db64097c46d7b29be897b7692e3f39642398c33a6ba4",
+    "src/whisperstream/speech/engine_specs.py": "35cbaafc5f2e26fdff19f6e9609ce538f2dfe8455f258d17caba5f3355b394af",
+    "src/whisperstream/speech/engines.py": "6fd4ae2dd4e0e3d96cdfba3b9e719e9b2c2b9a32abe3c3d2a80b5b2bb70f4a45",
+    "src/whisperstream/speech/kokoro_engine.py": "274c4aea19013c1c76ba84dc9440f5b43236d71f6e18730a79c5e6102e5de1eb",
+    "src/whisperstream/speech/kokoro_process.py": "79f8a25f96de4ecaad5d45f99df03a80e20a084178b721e8356aebaa8eeee934",
+    "src/whisperstream/speech/kokoro_worker.py": "82e8c00e34b1f07405f0694d39c5d6b453068f4bea7a232e425f8a2a625ef6e2",
+    "src/whisperstream/speech/supertonic_engine.py": "19942ea3afef3c5957d1860168e8e0f34332d3f7f2f9bc21fc3acddabe80dfb1"
+  },
+  "sherpa_native_sha256": [
+    {
+      "sha256": "fe05740dcf289cf06896cf0b4e7324bf900a94abb3b81318499bcb38c4e9cbec",
+      "file": "lib/_sherpa_onnx.cp313-win_amd64.pyd"
+    },
+    {
+      "sha256": "7f66f939a881baf4f46a2216496798edf4a1429878b646d12674aa62f27d8a25",
+      "file": "lib/onnxruntime.dll"
+    },
+    {
+      "sha256": "2729a0da3fbd20fb4e14e157f7cc0e00af848b55f04121319d445c138aeba214",
+      "file": "lib/sherpa-onnx-c-api.dll"
+    },
+    {
+      "sha256": "5b92c60d4a73d340f5453e17b1c5caf28a6f3baec08dcb8d8951bd3ea842fbe5",
+      "file": "lib/sherpa-onnx-cxx-api.dll"
+    }
+  ],
+  "models": {
+    "supertonic": {
+      "repo": "csukuangfj2/sherpa-onnx-supertonic-3-tts-int8-2026-05-11",
+      "revision": "cca5a0e6c96e1d2c720986bf7e75fcc81dee3ae4",
+      "files": {
+        "duration_predictor.int8.onnx": {
+          "size": 3700147,
+          "sha256": "c3eb91414d5ff8a7a239b7fe9e34e7e2bf8a8140d8375ffb14718b1c639325db"
+        },
+        "text_encoder.int8.onnx": {
+          "size": 36416150,
+          "sha256": "c7befd5ea8c3119769e8a6c1486c4edc6a3bc8365c67621c881bbb774b9902ff"
+        },
+        "vector_estimator.int8.onnx": {
+          "size": 78400833,
+          "sha256": "20cd86fa5c6effedfda0e7cffe5b0569ca401c440a0c3a1d72bf39286c0db3fd"
+        },
+        "vocoder.int8.onnx": {
+          "size": 25991073,
+          "sha256": "e923d60f53f95eb1ce235f1dc33ec56d9c057823c96fa6f8acf98f32b0da6152"
+        },
+        "tts.json": {
+          "size": 8253,
+          "sha256": "42078d3aef1cd43ab43021f3c54f47d2d75ceb4e75f627f118890128b06a0d09"
+        },
+        "unicode_indexer.bin": {
+          "size": 262144,
+          "sha256": "8402ca48e5189a8950138580b0fff64db6f072f24ac07cd54ba8b2fbb9883b30"
+        },
+        "voice.bin": {
+          "size": 517168,
+          "sha256": "67d5209b0ee8ce6c74105ffbe12fe6a7628aea3b4ba2fcb308a4a67938a93ce8"
+        },
+        "LICENSE": {
+          "size": 1070,
+          "sha256": "0dfe0d0ba84416fe3879d9a34f4909d8d0137c78d1e95834177b0414ac096fa2"
+        },
+        "README.md": {
+          "size": 19518,
+          "sha256": "a96c347945f7c8bc1673bea3525b1ac8d36fdde556e1e0a6a186052429caf863"
+        }
+      }
+    },
+    "kokoro": {
+      "repo": "csukuangfj/kokoro-multi-lang-v1_0",
+      "revision": "f7b96bb6bef5c5da4d3aa4f4e0498fbbf62dc78b",
+      "files": {
+        "LICENSE": {
+          "size": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+        },
+        "README.md": {
+          "size": 730,
+          "sha256": "87359cd32dfdff6dfeb16633b5a116aee3b9ac69dec3302378270a2cab9885b1"
+        },
+        "model.onnx": {
+          "size": 325560556,
+          "sha256": "b40f62b166ac8164b0627ef48a0b358eda0985e272fb03ef5252e7206305da11"
+        },
+        "voices.bin": {
+          "size": 28200960,
+          "sha256": "1c5a5b983d3d50d8586d437a51f3faa2da7919ce76a013c081e65671a3447c29"
+        },
+        "tokens.txt": {
+          "size": 687,
+          "sha256": "6ebb6bb288f20f3ae8d004d3c2ca27697da27c037d75e81a60e2a6a663f95425"
+        },
+        "lexicon-us-en.txt": {
+          "size": 5956885,
+          "sha256": "7daaab53a181be9885b853a8582bf1838186317e5dadacbcef9c426d6fa0da14"
+        },
+        "espeak-ng-data/en_dict": {
+          "size": 166944,
+          "sha256": "71bd330ba8a2e3e8076e631508208ef49449d6147c17b7bd2b4b1e1468292e35"
+        },
+        "espeak-ng-data/phondata": {
+          "size": 550424,
+          "sha256": "4e0288957874029a8c3c9f41a8f517ad4bf18127046decbdd4b9d1d6807ce3a3"
+        },
+        "espeak-ng-data/phonindex": {
+          "size": 39074,
+          "sha256": "3ca7b8fa3b42624e4b0f152707e7a39245fce569aa99ea47c055d9e622fcf0c4"
+        },
+        "espeak-ng-data/phontab": {
+          "size": 55796,
+          "sha256": "886f3fa402cb0ba73d483aa8ad000af47a6b7cc06293c75a97913fba68a530f6"
+        },
+        "espeak-ng-data/intonations": {
+          "size": 2040,
+          "sha256": "3f8af65fd3eda9759a10f021d61361c120871f463515229c925995c7f90918cc"
+        },
+        "espeak-ng-data/lang/gmw/en": {
+          "size": 140,
+          "sha256": "4605d5330801de3641c6e366d15f129ea1f5ffbce8722642aba01ace07ab9c83"
+        },
+        "espeak-ng-data/lang/gmw/en-US": {
+          "size": 257,
+          "sha256": "41534c2a22df5dd4f1052ff9e1a33a3ea7bff5a26b5c02bdad5ba8ddb7524704"
+        }
+      }
+    }
+  },
+  "clips": [
+    {
+      "file": "supertonic-0.ogg",
+      "engine": "supertonic",
+      "voice_id": 0,
+      "native_speaker_id": 0,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 132250,
+      "size": 29278,
+      "sha256": "e62bdfb63d532ad31a2953b57485b8351c4fbbd9a5331a05aa43507c8ccbe8f0"
+    },
+    {
+      "file": "supertonic-1.ogg",
+      "engine": "supertonic",
+      "voice_id": 1,
+      "native_speaker_id": 1,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 123838,
+      "size": 28248,
+      "sha256": "6043d0fb3b23fdfe3e8ce2ad9079cec6fdb3edf1015d61d62e81abe9203732c8"
+    },
+    {
+      "file": "supertonic-2.ogg",
+      "engine": "supertonic",
+      "voice_id": 2,
+      "native_speaker_id": 2,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 136453,
+      "size": 31360,
+      "sha256": "a585fedd70cabaf7b60b28f822d3a5fa345ee1de7a8183d840211766c6151865"
+    },
+    {
+      "file": "supertonic-3.ogg",
+      "engine": "supertonic",
+      "voice_id": 3,
+      "native_speaker_id": 3,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 117236,
+      "size": 26245,
+      "sha256": "ba213b2b4fe43e13588850ad98a235cf801f4937a026d71a2a4e7e3ada6174dc"
+    },
+    {
+      "file": "supertonic-4.ogg",
+      "engine": "supertonic",
+      "voice_id": 4,
+      "native_speaker_id": 4,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 127432,
+      "size": 28612,
+      "sha256": "f11dfdca008276c0c9fd73686bae5c580315246f12cb8412706aa83977090884"
+    },
+    {
+      "file": "supertonic-5.ogg",
+      "engine": "supertonic",
+      "voice_id": 5,
+      "native_speaker_id": 5,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 132166,
+      "size": 29946,
+      "sha256": "b60d32c0d120811b1c99fc10b04d81693549fdc2a0b675a33f328127d787cb82"
+    },
+    {
+      "file": "supertonic-6.ogg",
+      "engine": "supertonic",
+      "voice_id": 6,
+      "native_speaker_id": 6,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 129014,
+      "size": 28226,
+      "sha256": "6abbe1cd0f70b6ffb9035cde41b9d0506b7cb1b520aee15876024861f1776070"
+    },
+    {
+      "file": "supertonic-7.ogg",
+      "engine": "supertonic",
+      "voice_id": 7,
+      "native_speaker_id": 7,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 114798,
+      "size": 27078,
+      "sha256": "fd50b2a79ef264f9bbf653ef1d5d4cba2f2e789dcf89c86c572f225c9676b3b1"
+    },
+    {
+      "file": "supertonic-8.ogg",
+      "engine": "supertonic",
+      "voice_id": 8,
+      "native_speaker_id": 8,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 123206,
+      "size": 25768,
+      "sha256": "88ee6835c004875936f43b00df90e70dcfd0d62bc4d75e9092eb2c35846b9e93"
+    },
+    {
+      "file": "supertonic-9.ogg",
+      "engine": "supertonic",
+      "voice_id": 9,
+      "native_speaker_id": 9,
+      "sample_rate": 44100,
+      "channels": 1,
+      "frames": 131745,
+      "size": 27044,
+      "sha256": "dd90ea42a7404157a640b6369874ba77a46d1078bfec7539ce949492158bcb20"
+    },
+    {
+      "file": "kokoro-af_heart.ogg",
+      "engine": "kokoro",
+      "voice_id": "af_heart",
+      "native_speaker_id": 3,
+      "sample_rate": 24000,
+      "channels": 1,
+      "frames": 60354,
+      "size": 19754,
+      "sha256": "32fdc132147b4e18b046527f8d224829361c3e4d1e1dff70540c581a37669bc8"
+    },
+    {
+      "file": "kokoro-af_bella.ogg",
+      "engine": "kokoro",
+      "voice_id": "af_bella",
+      "native_speaker_id": 2,
+      "sample_rate": 24000,
+      "channels": 1,
+      "frames": 62218,
+      "size": 19823,
+      "sha256": "8d56a921cec5688f38a9529647cf3c31f174683da87da68d5a531ab7d561c4b0"
+    },
+    {
+      "file": "kokoro-af_nicole.ogg",
+      "engine": "kokoro",
+      "voice_id": "af_nicole",
+      "native_speaker_id": 6,
+      "sample_rate": 24000,
+      "channels": 1,
+      "frames": 78466,
+      "size": 24187,
+      "sha256": "a3c590a1cc6939bfff05ded1a7377e282b4034dab93465d65de865f143d58d9a"
+    },
+    {
+      "file": "kokoro-af_aoede.ogg",
+      "engine": "kokoro",
+      "voice_id": "af_aoede",
+      "native_speaker_id": 1,
+      "sample_rate": 24000,
+      "channels": 1,
+      "frames": 57974,
+      "size": 19223,
+      "sha256": "69182324e7193d5ea5e30f5ed9c6d4cf519e5641f6a9100326c351753048fe45"
+    },
+    {
+      "file": "kokoro-af_kore.ogg",
+      "engine": "kokoro",
+      "voice_id": "af_kore",
+      "native_speaker_id": 5,
+      "sample_rate": 24000,
+      "channels": 1,
+      "frames": 60458,
+      "size": 19748,
+      "sha256": "46784276d69da45be48f61cea5bf30ed2cae0be3f246d7429d580ee57ec2588e"
+    },
+    {
+      "file": "kokoro-af_sarah.ogg",
+      "engine": "kokoro",
+      "voice_id": "af_sarah",
+      "native_speaker_id": 9,
+      "sample_rate": 24000,
+      "channels": 1,
+      "frames": 61619,
+      "size": 20615,
+      "sha256": "2d8e2b098d848321fb7721ee2ff004150ac5a2bda2ce27b4f6d824560e878b1b"
+    },
+    {
+      "file": "kokoro-am_fenrir.ogg",
+      "engine": "kokoro",
+      "voice_id": "am_fenrir",
+      "native_speaker_id": 14,
+      "sample_rate": 24000,
+      "channels": 1,
+      "frames": 56450,
+      "size": 19061,
+      "sha256": "5a0b785c1d201550d0c8e86b015b4d224e18127b6a75ba6116b319466f9842cc"
+    },
+    {
+      "file": "kokoro-am_michael.ogg",
+      "engine": "kokoro",
+      "voice_id": "am_michael",
+      "native_speaker_id": 16,
+      "sample_rate": 24000,
+      "channels": 1,
+      "frames": 67590,
+      "size": 21453,
+      "sha256": "65ecc9d1242d963f2dcefafc3b7c3b8f83e65c3ccd73bfd2dcaec149ec21f0c1"
+    },
+    {
+      "file": "kokoro-am_puck.ogg",
+      "engine": "kokoro",
+      "voice_id": "am_puck",
+      "native_speaker_id": 18,
+      "sample_rate": 24000,
+      "channels": 1,
+      "frames": 54609,
+      "size": 20639,
+      "sha256": "bdf6a857cb540b77129bf2d5d39251df58723106fd9b7a43d76342ef43ff56af"
+    }
+  ]
+}

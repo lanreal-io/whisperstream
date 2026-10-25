@@ -1,0 +1,3 @@
+Good morning Priya,
+
+Quick update: the deploy went through and everything looks stable.

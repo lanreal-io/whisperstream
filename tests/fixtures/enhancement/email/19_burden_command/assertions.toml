@@ -1,0 +1,7 @@
+must_contain = [
+    "restart the staging server",
+    "check the logs",
+    "don't deploy until I confirm",
+]
+must_not_contain = []
+greeting = "none"

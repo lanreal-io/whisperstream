@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "generator": "scripts/generate_speech_fixture.py",
+  "engine": "kokoro",
+  "voice": "af_heart",
+  "text": "Hello, this is a generated test clip for speech recognition.",
+  "sample_rate": 16000,
+  "channels": 1,
+  "frames": 67600,
+  "files": {
+    "speech.wav": "3b586e4ef743c508b375984fc7fd1914cf3088ab8a0f0ade059e8f698f617c9d",
+    "speech.txt": "643814e953f410647e09091bc53307904ac743a3cdeb518bdb5d6629c512039d"
+  }
+}

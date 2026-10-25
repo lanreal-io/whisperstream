@@ -1,0 +1,7 @@
+must_contain = [
+    "Look",
+    "not totally sure",
+    "firm figures",
+]
+must_not_contain = []
+greeting = "none"

@@ -1,0 +1,8 @@
+{
+  "hook_event_name": "PermissionRequest",
+  "session_id": "fixture-permission-session",
+  "tool_name": "Bash",
+  "tool_input": {
+    "description": "Run the synthetic verification command"
+  }
+}

@@ -1,0 +1,6 @@
+must_contain = [
+    "Saturday",
+]
+must_not_contain = [
+    "Friday",
+]

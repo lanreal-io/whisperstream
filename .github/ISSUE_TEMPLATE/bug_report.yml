@@ -1,0 +1,71 @@
+name: Report a bug
+description: Tell me about a problem you can reproduce in Whisperstream.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Whisperstream is a spare-time project, so I can't promise a reply or a fix, but I'll look at it when I can.
+
+        Please search [existing issues](https://github.com/lanreal-io/whisperstream/issues) first. If someone has already reported the same problem, add your details there.
+
+        Issues and attachments are public. Don't include API keys, transcripts, recordings or personal information. To share logs privately, email [support@whisperstream.io](mailto:support@whisperstream.io) and include the issue link. Report security problems by email, not in an issue.
+  - type: input
+    id: version
+    attributes:
+      label: Whisperstream version or source commit
+      description: You'll find the version in About. For a source build, include the commit if you know it.
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS (beta)
+    validations:
+      required: true
+  - type: input
+    id: os_version
+    attributes:
+      label: OS version
+      description: Optional. For example, Windows 11 24H2 or macOS 15.5.
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you installed it
+      options:
+        - Official installer
+        - Built from source
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the steps that lead to the problem.
+      placeholder: |
+        1. Open ...
+        2. Hold the shortcut and say ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Logs or screenshots
+      description: Optional. About > Export logs saves a ZIP on your computer; the app never uploads it. Review it before attaching, and remove anything sensitive from screenshots. GitHub uploads an attached file straight away, even before you submit.

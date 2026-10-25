@@ -1,0 +1,6 @@
+must_contain = [
+    "draft proposal",
+    "pricing section",
+]
+must_not_contain = []
+greeting = "Good afternoon,"

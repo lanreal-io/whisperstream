@@ -1,0 +1,7 @@
+must_contain = [
+    "offsite",
+    "Friday",
+    "projector",
+]
+must_not_contain = []
+greeting = "Hello,"

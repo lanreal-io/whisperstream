@@ -1,0 +1,7 @@
+must_contain = [
+    ".then()",
+]
+must_not_contain = [
+    "dot then",
+]
+case_sensitive = true

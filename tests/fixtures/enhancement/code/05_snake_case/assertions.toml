@@ -1,0 +1,11 @@
+must_contain = [
+    "auth_middleware",
+    "API router",
+]
+must_not_contain = [
+    "Snakecase",
+    "snakecase",
+    "auth middleware",
+    "api router",
+]
+case_sensitive = true

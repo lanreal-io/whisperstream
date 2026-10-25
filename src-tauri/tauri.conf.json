@@ -1,0 +1,146 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-utils/schema.json",
+  "productName": "Whisperstream",
+  "version": "2.0.0",
+  "build": {
+    "frontendDist": "../frontend/dist",
+    "devUrl": "http://localhost:1420",
+    "beforeDevCommand": "npm run dev --prefix frontend",
+    "beforeBuildCommand": "npm run build --prefix frontend"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Whisperstream",
+        "width": 957,
+        "height": 680,
+        "resizable": false,
+        "decorations": false,
+        "center": true,
+        "dragDropEnabled": true,
+        "visible": false
+      },
+      {
+        "label": "hud",
+        "backgroundThrottling": "disabled",
+        "title": "",
+        "url": "/hud",
+        "width": 160,
+        "height": 80,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "focusable": false
+      },
+      {
+        "label": "recording-control",
+        "backgroundThrottling": "disabled",
+        "title": "",
+        "url": "/recording-control",
+        "width": 84,
+        "height": 40,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "focusable": false
+      },
+      {
+        "label": "snap-guide",
+        "backgroundThrottling": "disabled",
+        "title": "",
+        "url": "/snap-guide",
+        "width": 1,
+        "height": 1,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "focusable": false
+      },
+      {
+        "label": "popup-review",
+        "title": "",
+        "url": "/popup/review",
+        "width": 432,
+        "height": 520,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "center": true
+      },
+      {
+        "label": "popup-eula",
+        "title": "",
+        "url": "/popup/eula",
+        "width": 600,
+        "height": 680,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "center": true
+      },
+      {
+        "label": "popup-error",
+        "title": "",
+        "url": "/popup/error",
+        "width": 412,
+        "height": 320,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "alwaysOnTop": true,
+        "visible": false,
+        "skipTaskbar": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "capabilities": [
+        "default"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "licenseFile": "resources/GPL-3.0.txt",
+    "resources": [
+      "resources/THIRD_PARTY_LICENSES.txt",
+      "../LICENSE",
+      "resources/PRIVACY.txt",
+      "resources/EULA.txt",
+      "resources/eula-policy.json",
+      "resources/eula/2.1.txt",
+      "resources/gemma-4-e2b-chat-template.jinja"
+    ]
+  }
+}

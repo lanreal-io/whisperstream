@@ -1,0 +1,1 @@
+Use await instead of dot then and remove the nested callback.

@@ -1,0 +1,6 @@
+must_contain = [
+    "contract is attached",
+    "looks off",
+]
+must_not_contain = []
+greeting = "none"

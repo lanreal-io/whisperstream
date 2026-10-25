@@ -1,0 +1,7 @@
+must_contain = [
+    "one on one",
+    "conflict",
+    "Thursday",
+]
+must_not_contain = []
+greeting = "Hi Nina,"

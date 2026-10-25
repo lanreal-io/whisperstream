@@ -1,0 +1,7 @@
+must_contain = [
+    "introduce",
+    "Sam",
+    "churn",
+]
+must_not_contain = []
+greeting = "none"

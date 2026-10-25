@@ -1,0 +1,10 @@
+must_contain = [
+    "username column",
+]
+must_not_contain = [
+    "userName",
+    "user_name",
+    "USER_NAME",
+    "UserName",
+]
+case_sensitive = true

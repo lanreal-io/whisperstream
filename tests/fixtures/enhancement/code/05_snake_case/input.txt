@@ -1,0 +1,1 @@
+Snakecase auth middleware should wrap every handler in the api router.

@@ -1,0 +1,7 @@
+must_contain = [
+    "confirm the meeting",
+    "tomorrow",
+    "10 AM",
+]
+must_not_contain = []
+greeting = "Hey Sarah,"

@@ -1,0 +1,11 @@
+{
+  "bundle": {
+    "publisher": "Lanreal Technologies Inc.",
+    "createUpdaterArtifacts": false,
+    "windows": {
+      "webviewInstallMode": {
+        "type": "offlineInstaller"
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+must_contain = [
+    "API key",
+    "process.env.API_KEY",
+    ".env",
+]
+must_not_contain = [
+    "api key",
+]
+case_sensitive = true

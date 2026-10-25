@@ -1,0 +1,58 @@
+{
+  "identifier": "com.whisperstream.app",
+  "bundle": {
+    "targets": [
+      "nsis"
+    ],
+    "externalBin": [
+      "binaries/whisperstream-engine",
+      "binaries/llama-server"
+    ],
+    "resources": [
+      "resources/THIRD_PARTY_LICENSES.txt",
+      "../LICENSE",
+      "resources/PRIVACY.txt",
+      "resources/EULA.txt",
+      "resources/eula-policy.json",
+      "resources/eula/2.1.txt",
+      "resources/gemma-4-e2b-chat-template.jinja",
+      "../NOTICE",
+      "../LICENSES/Chirp-MIT.txt",
+      "binaries/ggml.dll",
+      "binaries/ggml-base.dll",
+      "binaries/ggml-cpu-alderlake.dll",
+      "binaries/ggml-cpu-cannonlake.dll",
+      "binaries/ggml-cpu-cascadelake.dll",
+      "binaries/ggml-cpu-cooperlake.dll",
+      "binaries/ggml-cpu-haswell.dll",
+      "binaries/ggml-cpu-icelake.dll",
+      "binaries/ggml-cpu-ivybridge.dll",
+      "binaries/ggml-cpu-piledriver.dll",
+      "binaries/ggml-cpu-sandybridge.dll",
+      "binaries/ggml-cpu-sapphirerapids.dll",
+      "binaries/ggml-cpu-skylakex.dll",
+      "binaries/ggml-cpu-sse42.dll",
+      "binaries/ggml-cpu-x64.dll",
+      "binaries/ggml-cpu-zen4.dll",
+      "binaries/ggml-rpc.dll",
+      "binaries/ggml-vulkan.dll",
+      "binaries/libomp.dll",
+      "binaries/llama-server-impl.dll",
+      "binaries/LICENSE-LLVM-OpenMP",
+      "binaries/llama.dll",
+      "binaries/llama-common.dll",
+      "binaries/mtmd.dll"
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "displayLanguageSelector": false,
+        "installMode": "both",
+        "installerHooks": "installer/hooks.nsh",
+        "customLanguageFiles": {
+          "English": "installer/whisperstream-en.nsh"
+        }
+      }
+    }
+  }
+}

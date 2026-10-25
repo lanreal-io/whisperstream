@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "notice_id": "open-source-2.1-gpl3",
+  "requirement_kind": "substantive_update",
+  "terms_version": "2.1",
+  "terms_sha256": "7f81a0616d249529e55b1d7d8e31955bcd0e1fcb32d760f0619fd19de4da71fd",
+  "terms_path": "eula/2.1.txt",
+  "summary": [
+    "Whisperstream is free and open source. Lanreal's original contributions are licensed under GNU GPL version 3 only. You may use, modify and redistribute the covered software under that license; upstream MIT and other component notices remain in effect. Corresponding Source is available at github.com/lanreal-io/whisperstream.",
+    "The app retains its processing acknowledgment and separate cloud-provider consent, optional model terms and Lockdown controls. This acknowledgment does not add a condition to your GPL rights or prevent you from modifying the app. Included functionality is free of charge and requires no activation.",
+    "Model downloads use pinned Hugging Face sources, with verified GitHub backups for supported speech models. Kokoro downloads use Hugging Face only. Downloads send connection metadata, not audio or transcripts; compatible cached models remain usable.",
+    "Built from source, the app makes no update requests. The official installer checks for signed updates and installs one only after you accept; update requests go to Cloudflare R2 with connection metadata only. Lockdown stops them.",
+    "Optional models and language data keep their own licenses, including GPL-licensed eSpeak components and language data used by upstream Kokoro. Supertonic's OpenRAIL-M restrictions apply only to that model; they do not restrict the GPL-covered application or Kokoro. Preserve model notices, including Stream-1 Mini by Whisperstream attribution.",
+    "The software carries the GPL warranty disclaimer. This notice does not modify separate agreements; source-code, relinking and other applicable obligations, prior permissions and mandatory rights remain unaffected. Earlier acceptance evidence is preserved.",
+    "Bug reports and feature requests open GitHub Issues in your browser. Issues and attachments are public. The app does not upload your content automatically."
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "source_config": "src-tauri/tauri.conf.json",
+  "merge_contract": {
+    "platform_overlay_names": {
+      "windows": "tauri.windows.conf.json",
+      "macos": "tauri.macos.conf.json"
+    },
+    "rule": "Tauri merges the platform overlay after the base config; an overlay value replaces a conflicting base value, including an array.",
+    "base_owns": [
+      "$schema",
+      "productName",
+      "version",
+      "build",
+      "app",
+      "bundle.active",
+      "bundle.icon"
+    ]
+  },
+  "shared": {
+    "product_name": "Whisperstream",
+    "resources": [
+      "resources/THIRD_PARTY_LICENSES.txt",
+      "../LICENSE",
+      "resources/PRIVACY.txt",
+      "resources/EULA.txt",
+      "resources/eula-policy.json",
+      "resources/eula/2.1.txt",
+      "resources/gemma-4-e2b-chat-template.jinja"
+    ],
+    "license_file": "resources/GPL-3.0.txt",
+    "icons": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "platforms": {
+    "windows": {
+      "identifier": "com.whisperstream.app",
+      "bundle_targets": [
+        "nsis"
+      ],
+      "external_bin": [
+        "binaries/whisperstream-engine",
+        "binaries/llama-server"
+      ],
+      "staged_external_bin": [
+        "binaries/whisperstream-engine-x86_64-pc-windows-msvc.exe",
+        "binaries/llama-server-x86_64-pc-windows-msvc.exe"
+      ],
+      "resources": [
+        "../NOTICE",
+        "../LICENSES/Chirp-MIT.txt",
+        "binaries/ggml.dll",
+        "binaries/ggml-base.dll",
+        "binaries/ggml-cpu-alderlake.dll",
+        "binaries/ggml-cpu-cannonlake.dll",
+        "binaries/ggml-cpu-cascadelake.dll",
+        "binaries/ggml-cpu-cooperlake.dll",
+        "binaries/ggml-cpu-haswell.dll",
+        "binaries/ggml-cpu-icelake.dll",
+        "binaries/ggml-cpu-ivybridge.dll",
+        "binaries/ggml-cpu-piledriver.dll",
+        "binaries/ggml-cpu-sandybridge.dll",
+        "binaries/ggml-cpu-sapphirerapids.dll",
+        "binaries/ggml-cpu-skylakex.dll",
+        "binaries/ggml-cpu-sse42.dll",
+        "binaries/ggml-cpu-x64.dll",
+        "binaries/ggml-cpu-zen4.dll",
+        "binaries/ggml-rpc.dll",
+        "binaries/ggml-vulkan.dll",
+        "binaries/libomp.dll",
+        "binaries/llama-server-impl.dll",
+        "binaries/LICENSE-LLVM-OpenMP",
+        "binaries/llama.dll",
+        "binaries/llama-common.dll",
+        "binaries/mtmd.dll"
+      ],
+      "windows_bundle_key": "bundle.windows.nsis"
+    },
+    "macos_internal": {
+      "identifier": "io.lanreal.whisperstream",
+      "bundle_targets": [
+        "app"
+      ],
+      "create_updater_artifacts": false,
+      "icons": [
+        "icons/macos-app-icon-32.png",
+        "icons/macos-app-icon-128.png",
+        "icons/macos-app-icon-256.png",
+        "icons/icon.icns"
+      ],
+      "external_bin": [
+        "binaries/whisperstream-engine",
+        "binaries/whisperstream-macos-stt-worker",
+        "binaries/llama-server"
+      ],
+      "staged_external_bin": [
+        "binaries/whisperstream-engine-aarch64-apple-darwin",
+        "binaries/whisperstream-macos-stt-worker-aarch64-apple-darwin",
+        "binaries/llama-server-aarch64-apple-darwin"
+      ],
+      "resources": [
+        "resources/THIRD_PARTY_LICENSES.txt",
+        "../LICENSE",
+        "resources/PRIVACY.txt",
+        "resources/EULA.txt",
+        "resources/eula-policy.json",
+        "resources/eula/2.1.txt",
+        "resources/gemma-4-e2b-chat-template.jinja",
+        "../NOTICE",
+        "../LICENSES/Chirp-MIT.txt",
+        "resources/llama-cpp/*"
+      ],
+      "bundle_resources_dir": "Contents/Resources/resources",
+      "engine_resources_env": "WHISPERSTREAM_BUNDLE_RESOURCES_DIR",
+      "minimum_system_version": "14.0",
+      "signing_identity": "-",
+      "hardened_runtime": false,
+      "info_plist": "Info.macos-internal.plist",
+      "updater": {
+        "endpoints": [],
+        "pubkey": ""
+      },
+      "forbidden_suffixes": [
+        ".exe",
+        ".dll"
+      ],
+      "forbidden_bundle_keys": [
+        "bundle.windows"
+      ]
+    }
+  }
+}

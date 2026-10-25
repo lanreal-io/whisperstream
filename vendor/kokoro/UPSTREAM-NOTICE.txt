@@ -1,0 +1,34 @@
+Kokoro v1.0 upstream runtime for the GPL source edition
+
+Distributor: Fangjun Kuang (csukuangfj), k2-fsa/sherpa-onnx
+Pinned model repository:
+https://huggingface.co/csukuangfj/kokoro-multi-lang-v1_0/tree/f7b96bb6bef5c5da4d3aa4f4e0498fbbf62dc78b
+
+The model, tokens, voices.bin and US English lexicon are copied without
+modification. The upstream model LICENSE is Apache-2.0. Model metadata
+attributes its conversion lineage to thewh1teagle/kokoro-onnx and upstream
+Kokoro. Conversion MIT notices and training-data attribution are retained
+alongside this notice and in the generated third-party notices.
+
+The upstream graph/voice binary contains 54 embeddings. The application
+exposes only af_heart, af_bella, af_nicole, af_aoede, af_kore, af_sarah,
+am_fenrir, am_michael and am_puck. The complete upstream voice file is
+downloaded unchanged; it is not a nine-embedding subset.
+
+The upstream US English lexicon derives from hexgrad/misaki (Apache-2.0).
+The compiled eSpeak data is separately licensed; the aggregate model LICENSE
+does not supersede those terms. Only en_dict, phondata, phonindex, phontab,
+intonations and lang/gmw/en and lang/gmw/en-US are selected. Other language
+dictionaries, variants, Jieba and Chinese FSTs are not acquired. The selected
+compiled data is used unchanged. eSpeak NG is GPL-3.0-or-later; its complete
+GPL text is retained in scripts/license-texts/espeak-ng-gpl-3.0.txt and generated
+notices. Native eSpeak/piper component notices appear in Section 2.
+
+These model and language-data files download directly from the pinned upstream
+repository and are not bundled in the installer. Exact file hashes and sizes
+are recorded in upstream-files.json; source/build mappings are documented in
+SOURCE-MATERIALS.md.
+
+NOTICE.txt and the NLTK/G2P attribution describe the older eSpeak-free archive,
+which is no longer a new-download source but remains supported for existing
+caches.

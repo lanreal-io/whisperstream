@@ -1,0 +1,1 @@
+Use await instead of .then() and remove the nested callback.

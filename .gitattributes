@@ -1,0 +1,50 @@
+# NSIS requires CRLF line endings in the license page source file
+# (tauri-bundler does not normalize line endings; LF-only causes broken
+# rendering in the installer). Treat as binary to freeze byte contents.
+# PRIVACY.txt is not the licenseFile, but it ships via bundle.resources
+# and has the same CRLF / BOM / ASCII constraints as EULA.txt, so it is
+# frozen the same way.
+src-tauri/resources/EULA.txt binary
+src-tauri/resources/PRIVACY.txt binary
+# The installer licence page shows the GPL as CRLF; keep it frozen like EULA.txt.
+src-tauri/resources/GPL-3.0.txt binary
+# Version-addressed EULA resources are exact policy targets. Preserve their
+# bytes across Windows and macOS just like the installer-facing EULA.txt.
+src-tauri/resources/eula/*.txt binary
+
+# Keep Google's pinned Jinja template byte-identical across Windows checkouts.
+# Runtime SHA-256 verification intentionally covers the exact upstream bytes.
+src-tauri/resources/gemma-4-e2b-chat-template.jinja text eol=lf
+
+# PDFs are binary assets (e.g. the generated Lockdown Mode + HIPAA summary);
+# freeze their bytes so autocrlf never corrupts them on checkout/regeneration.
+*.pdf binary
+
+# Cargo rewrites its manifest and lockfile with LF endings. Pin those endings
+# so Windows checkouts do not repeatedly appear dirty under core.autocrlf=true.
+src-tauri/Cargo.toml text eol=lf
+src-tauri/Cargo.lock text eol=lf
+
+# Preserve exact upstream legal evidence and published notice bytes.
+vendor/stream-1-mini/LICENSE.txt -text
+vendor/stream-1-mini/NOTICE.txt -text
+
+# Preserve the exact upstream LLVM OpenMP notice bytes.
+scripts/license-texts/llvm-openmp.txt -text
+src/whisperstream/assets/silero_vad.onnx binary
+src/whisperstream/assets/silero-vad-LICENSE.txt -text
+
+# Keep the GPL and upstream MIT notice bytes stable; the NSIS licence page is
+# LICENSE with CRLF endings.
+LICENSE text eol=lf
+LICENSES/Chirp-MIT.txt text eol=lf
+
+# Preserve upstream notice bytes recorded in sherpa-upstream-provenance.json.
+scripts/license-texts/espeak-ng-*.txt -text
+scripts/license-texts/piper-phonemize.txt -text
+scripts/license-texts/ucd-tools.txt -text
+scripts/license-texts/uni-algo.txt -text
+
+# Synthetic speech fixture: the manifest pins exact bytes.
+tests/fixtures/synthetic/speech.wav binary
+tests/fixtures/synthetic/speech.txt -text

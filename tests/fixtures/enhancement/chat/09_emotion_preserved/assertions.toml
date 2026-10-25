@@ -1,0 +1,7 @@
+must_contain = [
+    "Haha",
+    "Sarah",
+]
+must_not_contain = [
+    "the the",
+]

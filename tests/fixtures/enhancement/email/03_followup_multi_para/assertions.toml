@@ -1,0 +1,9 @@
+must_contain = [
+    "revised contract",
+    "Friday",
+    "Alupin Legal",
+]
+must_not_contain = [
+    "thanks for your patience",
+]
+greeting = "Hi Mark,"

@@ -1,0 +1,7 @@
+must_contain = [
+    "final copy",
+    "updated logos",
+    "compliance",
+]
+must_not_contain = []
+greeting = "none"

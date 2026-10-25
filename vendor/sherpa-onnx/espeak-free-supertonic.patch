@@ -1,0 +1,296 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 145d3958..31db9517 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -70,2 +70,4 @@ option(SHERPA_ONNX_ENABLE_BINARY "Whether to build binaries" ${SUGGEST_BUILD_BIN
+ option(SHERPA_ONNX_ENABLE_TTS "Whether to build TTS related code" ON)
++option(SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY
++  "Whisperstream downstream build with Supertonic as the only TTS engine" OFF)
+ option(SHERPA_ONNX_ENABLE_SPEAKER_DIARIZATION "Whether to build speaker diarization related code" ON)
+@@ -230,2 +232,3 @@ message(STATUS "SHERPA_ONNX_ENABLE_BINARY ${SHERPA_ONNX_ENABLE_BINARY}")
+ message(STATUS "SHERPA_ONNX_ENABLE_TTS ${SHERPA_ONNX_ENABLE_TTS}")
++message(STATUS "SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY ${SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY}")
+ message(STATUS "SHERPA_ONNX_ENABLE_SPEAKER_DIARIZATION ${SHERPA_ONNX_ENABLE_SPEAKER_DIARIZATION}")
+@@ -283,2 +286,12 @@ endif()
+ 
++if(SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY)
++  if(NOT SHERPA_ONNX_ENABLE_TTS)
++    message(FATAL_ERROR
++      "SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY requires SHERPA_ONNX_ENABLE_TTS=ON")
++  endif()
++  add_definitions(-DSHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY=1)
++else()
++  add_definitions(-DSHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY=0)
++endif()
++
+ if(SHERPA_ONNX_ENABLE_SPEAKER_DIARIZATION)
+@@ -566,3 +579,3 @@ include(json)
+ 
+-if(SHERPA_ONNX_ENABLE_TTS)
++if(SHERPA_ONNX_ENABLE_TTS AND NOT SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY)
+   include(espeak-ng-for-piper)
+@@ -630,3 +643,3 @@ if(NOT BUILD_SHARED_LIBS)
+ # See https://people.freedesktop.org/~dbn/pkg-config-guide.html
+-  if(SHERPA_ONNX_ENABLE_TTS)
++  if(SHERPA_ONNX_ENABLE_TTS AND NOT SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY)
+     configure_file(cmake/sherpa-onnx-static.pc.in ${PROJECT_BINARY_DIR}/sherpa-onnx.pc @ONLY)
+diff --git a/sherpa-onnx/csrc/CMakeLists.txt b/sherpa-onnx/csrc/CMakeLists.txt
+index 30c12569..63f73159 100755
+--- a/sherpa-onnx/csrc/CMakeLists.txt
++++ b/sherpa-onnx/csrc/CMakeLists.txt
+@@ -282,20 +282,4 @@ if(SHERPA_ONNX_ENABLE_TTS)
+   list(APPEND sources
+-    character-lexicon.cc
+-    hifigan-vocoder.cc
+-    kokoro-multi-lang-lexicon.cc
+-    lexicon.cc
+-    matcha-tts-lexicon.cc
+-    melo-tts-lexicon.cc
+-    offline-tts-character-frontend.cc
+-    offline-tts-frontend.cc
+     offline-tts-impl.cc
+-    offline-tts-kitten-model-config.cc
+-    offline-tts-kitten-model.cc
+-    offline-tts-kokoro-model-config.cc
+-    offline-tts-kokoro-model.cc
+-    offline-tts-matcha-model-config.cc
+-    offline-tts-matcha-model.cc
+     offline-tts-model-config.cc
+-    offline-tts-pocket-model-config.cc
+-    offline-tts-pocket-model.cc
+     offline-tts-supertonic-impl.cc
+@@ -304,12 +288,33 @@ if(SHERPA_ONNX_ENABLE_TTS)
+     offline-tts-supertonic-unicode-processor.cc
+-    offline-tts-vits-model-config.cc
+-    offline-tts-vits-model.cc
+-    offline-tts-zipvoice-model-config.cc
+-    offline-tts-zipvoice-model.cc
+     offline-tts.cc
+-    piper-phonemize-lexicon.cc
+     sentence-piece-tokenizer.cc
+-    vocoder.cc
+-    vocos-vocoder.cc
+   )
++
++  if(NOT SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY)
++    list(APPEND sources
++      character-lexicon.cc
++      hifigan-vocoder.cc
++      kokoro-multi-lang-lexicon.cc
++      lexicon.cc
++      matcha-tts-lexicon.cc
++      melo-tts-lexicon.cc
++      offline-tts-character-frontend.cc
++      offline-tts-frontend.cc
++      offline-tts-kitten-model-config.cc
++      offline-tts-kitten-model.cc
++      offline-tts-kokoro-model-config.cc
++      offline-tts-kokoro-model.cc
++      offline-tts-matcha-model-config.cc
++      offline-tts-matcha-model.cc
++      offline-tts-pocket-model-config.cc
++      offline-tts-pocket-model.cc
++      offline-tts-vits-model-config.cc
++      offline-tts-vits-model.cc
++      offline-tts-zipvoice-model-config.cc
++      offline-tts-zipvoice-model.cc
++      piper-phonemize-lexicon.cc
++      vocoder.cc
++      vocos-vocoder.cc
++    )
++  endif()
+ endif()
+@@ -472,3 +477,3 @@ target_link_libraries(sherpa-onnx-core fstfar fst)
+ 
+-if(SHERPA_ONNX_ENABLE_TTS)
++if(SHERPA_ONNX_ENABLE_TTS AND NOT SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY)
+   target_link_libraries(sherpa-onnx-core
+@@ -841,4 +846,6 @@ if(SHERPA_ONNX_ENABLE_TESTS)
+       sentence-piece-tokenizer-test.cc
+-      piper-phonemize-test.cc
+     )
++    if(NOT SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY)
++      list(APPEND sherpa_onnx_test_srcs piper-phonemize-test.cc)
++    endif()
+   endif()
+diff --git a/sherpa-onnx/csrc/offline-tts-impl.cc b/sherpa-onnx/csrc/offline-tts-impl.cc
+index 7720a491..9b388ddc 100644
+--- a/sherpa-onnx/csrc/offline-tts-impl.cc
++++ b/sherpa-onnx/csrc/offline-tts-impl.cc
+@@ -18,2 +18,5 @@
+ 
++#include "sherpa-onnx/csrc/offline-tts-supertonic-impl.h"
++
++#if SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY == 0
+ #include "sherpa-onnx/csrc/offline-tts-kitten-impl.h"
+@@ -22,5 +25,5 @@
+ #include "sherpa-onnx/csrc/offline-tts-pocket-impl.h"
+-#include "sherpa-onnx/csrc/offline-tts-supertonic-impl.h"
+ #include "sherpa-onnx/csrc/offline-tts-vits-impl.h"
+ #include "sherpa-onnx/csrc/offline-tts-zipvoice-impl.h"
++#endif
+ 
+@@ -42,2 +45,7 @@ std::unique_ptr<OfflineTtsImpl> OfflineTtsImpl::Create(
+     const OfflineTtsConfig &config) {
++#if SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY == 1
++  if (!config.model.supertonic.tts_json.empty()) {
++    return std::make_unique<OfflineTtsSupertonicImpl>(config);
++  }
++#else
+   if (!config.model.vits.model.empty()) {
+@@ -58,2 +66,3 @@ std::unique_ptr<OfflineTtsImpl> OfflineTtsImpl::Create(
+   }
++#endif
+ 
+@@ -67,2 +76,7 @@ std::unique_ptr<OfflineTtsImpl> OfflineTtsImpl::Create(
+     Manager *mgr, const OfflineTtsConfig &config) {
++#if SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY == 1
++  if (!config.model.supertonic.tts_json.empty()) {
++    return std::make_unique<OfflineTtsSupertonicImpl>(mgr, config);
++  }
++#else
+   if (!config.model.vits.model.empty()) {
+@@ -83,2 +97,3 @@ std::unique_ptr<OfflineTtsImpl> OfflineTtsImpl::Create(
+   }
++#endif
+ 
+diff --git a/sherpa-onnx/csrc/offline-tts-model-config.cc b/sherpa-onnx/csrc/offline-tts-model-config.cc
+index 31265b36..0df66eca 100644
+--- a/sherpa-onnx/csrc/offline-tts-model-config.cc
++++ b/sherpa-onnx/csrc/offline-tts-model-config.cc
+@@ -13,2 +13,3 @@ namespace sherpa_onnx {
+ void OfflineTtsModelConfig::Register(ParseOptions *po) {
++#if SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY == 0
+   vits.Register(po);
+@@ -19,2 +20,3 @@ void OfflineTtsModelConfig::Register(ParseOptions *po) {
+   pocket.Register(po);
++#endif
+   supertonic.Register(po);
+@@ -37,2 +39,3 @@ bool OfflineTtsModelConfig::Validate() const {
+ 
++#if SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY == 0
+   if (!vits.model.empty()) {
+@@ -60,2 +63,3 @@ bool OfflineTtsModelConfig::Validate() const {
+   }
++#endif
+ 
+@@ -74,2 +78,3 @@ std::string OfflineTtsModelConfig::ToString() const {
+   os << "OfflineTtsModelConfig(";
++#if SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY == 0
+   os << "vits=" << vits.ToString() << ", ";
+@@ -80,2 +85,3 @@ std::string OfflineTtsModelConfig::ToString() const {
+   os << "pocket=" << pocket.ToString() << ", ";
++#endif
+   os << "supertonic=" << supertonic.ToString() << ", ";
+diff --git a/sherpa-onnx/python/csrc/CMakeLists.txt b/sherpa-onnx/python/csrc/CMakeLists.txt
+index 646fb976..a323b25c 100644
+--- a/sherpa-onnx/python/csrc/CMakeLists.txt
++++ b/sherpa-onnx/python/csrc/CMakeLists.txt
+@@ -79,10 +79,4 @@ if(SHERPA_ONNX_ENABLE_TTS)
+   list(APPEND srcs
+-    offline-tts-kitten-model-config.cc
+-    offline-tts-kokoro-model-config.cc
+-    offline-tts-matcha-model-config.cc
+     offline-tts-model-config.cc
+-    offline-tts-pocket-model-config.cc
+     offline-tts-supertonic-model-config.cc
+-    offline-tts-vits-model-config.cc
+-    offline-tts-zipvoice-model-config.cc
+     offline-tts.cc
+@@ -90,2 +84,12 @@ if(SHERPA_ONNX_ENABLE_TTS)
+   )
++  if(NOT SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY)
++    list(APPEND srcs
++      offline-tts-kitten-model-config.cc
++      offline-tts-kokoro-model-config.cc
++      offline-tts-matcha-model-config.cc
++      offline-tts-pocket-model-config.cc
++      offline-tts-vits-model-config.cc
++      offline-tts-zipvoice-model-config.cc
++    )
++  endif()
+ endif()
+diff --git a/sherpa-onnx/python/csrc/offline-tts-model-config.cc b/sherpa-onnx/python/csrc/offline-tts-model-config.cc
+index be908403..73c60bf8 100644
+--- a/sherpa-onnx/python/csrc/offline-tts-model-config.cc
++++ b/sherpa-onnx/python/csrc/offline-tts-model-config.cc
+@@ -9,2 +9,5 @@
+ #include "sherpa-onnx/csrc/offline-tts-model-config.h"
++#include "sherpa-onnx/python/csrc/offline-tts-supertonic-model-config.h"
++
++#if SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY == 0
+ #include "sherpa-onnx/python/csrc/offline-tts-kitten-model-config.h"
+@@ -13,5 +16,5 @@
+ #include "sherpa-onnx/python/csrc/offline-tts-pocket-model-config.h"
+-#include "sherpa-onnx/python/csrc/offline-tts-supertonic-model-config.h"
+ #include "sherpa-onnx/python/csrc/offline-tts-vits-model-config.h"
+ #include "sherpa-onnx/python/csrc/offline-tts-zipvoice-model-config.h"
++#endif
+ 
+@@ -20,2 +23,3 @@ namespace sherpa_onnx {
+ void PybindOfflineTtsModelConfig(py::module *m) {
++#if SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY == 0
+   PybindOfflineTtsVitsModelConfig(m);
+@@ -26,2 +30,3 @@ void PybindOfflineTtsModelConfig(py::module *m) {
+   PybindOfflineTtsPocketModelConfig(m);
++#endif
+   PybindOfflineTtsSupertonicModelConfig(m);
+@@ -32,2 +37,3 @@ void PybindOfflineTtsModelConfig(py::module *m) {
+       .def(py::init<>())
++#if SHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY == 0
+       .def(py::init<const OfflineTtsVitsModelConfig &,
+@@ -55,2 +61,3 @@ void PybindOfflineTtsModelConfig(py::module *m) {
+       .def_readwrite("pocket", &PyClass::pocket)
++#endif
+       .def_readwrite("supertonic", &PyClass::supertonic)
+diff --git a/sherpa-onnx/python/sherpa_onnx/__init__.py b/sherpa-onnx/python/sherpa_onnx/__init__.py
+index d7ad0c34..ebc568bb 100644
+--- a/sherpa-onnx/python/sherpa_onnx/__init__.py
++++ b/sherpa-onnx/python/sherpa_onnx/__init__.py
+@@ -1,3 +1,18 @@
++from sherpa_onnx.lib import _sherpa_onnx as _sherpa_onnx_native
++
++_optional_tts_config_names = (
++    "OfflineTtsKittenModelConfig",
++    "OfflineTtsKokoroModelConfig",
++    "OfflineTtsMatchaModelConfig",
++    "OfflineTtsPocketModelConfig",
++    "OfflineTtsVitsModelConfig",
++    "OfflineTtsZipvoiceModelConfig",
++)
++for _name in _optional_tts_config_names:
++    if hasattr(_sherpa_onnx_native, _name):
++        globals()[_name] = getattr(_sherpa_onnx_native, _name)
++del _name, _optional_tts_config_names, _sherpa_onnx_native
++
+ from sherpa_onnx.lib._sherpa_onnx import (
+     Alsa,
+     AudioEvent,
+@@ -52,14 +67,8 @@ from sherpa_onnx.lib._sherpa_onnx import (
+     OfflineTransducerModelConfig,
+     OfflineTts,
+     OfflineTtsConfig,
+-    OfflineTtsKittenModelConfig,
+-    OfflineTtsKokoroModelConfig,
+-    OfflineTtsMatchaModelConfig,
+     OfflineTtsModelConfig,
+-    OfflineTtsPocketModelConfig,
+     OfflineTtsSupertonicModelConfig,
+-    OfflineTtsVitsModelConfig,
+-    OfflineTtsZipvoiceModelConfig,
+     OfflineWenetCtcModelConfig,
+     OfflineWhisperModelConfig,
+     OfflineZipformerAudioTaggingModelConfig,
+diff --git a/setup.py b/setup.py
+index a8e8ba8..b32c8a4 100644
+--- a/setup.py
++++ b/setup.py
+@@ -19,2 +19,8 @@ def read_long_description():
+ def read_long_description():
++    cmake_args = os.environ.get("SHERPA_ONNX_CMAKE_ARGS", "")
++    if "-DSHERPA_ONNX_ENABLE_WHISPERSTREAM_SUPERTONIC_ONLY=ON" in cmake_args:
++        return (
++            "Whisperstream downstream sherpa-onnx build with ASR and "
++            "Supertonic text-to-speech support."
++        )
+     with open("README.md", encoding="utf8") as f:

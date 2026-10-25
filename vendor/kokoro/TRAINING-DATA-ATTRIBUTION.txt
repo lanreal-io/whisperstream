@@ -1,0 +1,42 @@
+Conservative Kokoro training-data attribution
+
+Kokoro's pinned model card identifies the following datasets among the inputs
+to the shared Kokoro model. The nine American English preset embeddings in the
+Whisperstream archive do not include a Koniwa or SIWIS preset. This attribution
+is nevertheless retained conservatively because the shared model was trained
+in part on these datasets. It does not state or imply that Whisperstream
+redistributes either source dataset.
+
+Koniwa `tnc`
+Title: Koniwa, an open collection of annotated voices in Japanese language
+Audio licensor and attribution party: Television Nishinippon (TNC)
+Repository maintainer: shirayu and Koniwa contributors
+Source: https://github.com/koniwa/koniwa
+Source attribution record: https://github.com/koniwa/koniwa/blob/master/data/tnc/README.md
+Audio license identified by the source: Creative Commons Attribution 3.0
+License: https://creativecommons.org/licenses/by/3.0/
+Original literary texts: public domain, per the source attribution record
+Kokoro model-card use: less than one hour of Japanese training audio
+Modification statement: Whisperstream does not distribute or modify the
+Koniwa recordings. Kokoro's upstream authors used them while training the
+shared Kokoro model.
+
+SIWIS
+Title: The SIWIS French Speech Synthesis Database, 2016
+Creators: Junichi Yamagishi, Pierre-Edouard Honnet, Philip Garner, and
+Alexandros Lazaridis
+Publisher: University of Edinburgh, School of Informatics, Centre for Speech
+Technology Research
+Citation: Yamagishi, Junichi; Honnet, Pierre-Edouard; Garner, Philip;
+Lazaridis, Alexandros. (2017). The SIWIS French Speech Synthesis Database,
+2016 [dataset]. https://doi.org/10.7488/ds/1705
+Source: https://datashare.ed.ac.uk/items/1de74991-eede-4b48-8fbe-6c2abaed88d8
+License: Creative Commons Attribution 4.0 International
+License: https://creativecommons.org/licenses/by/4.0/
+Kokoro model-card use: less than eleven hours of French training audio
+Modification statement: Whisperstream does not distribute or modify the SIWIS
+recordings. Kokoro's upstream authors used them while training the shared
+Kokoro model.
+
+No endorsement by the dataset creators, speakers, publishers, or licensors is
+stated or implied.

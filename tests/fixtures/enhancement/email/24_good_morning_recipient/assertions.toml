@@ -1,0 +1,6 @@
+must_contain = [
+    "deploy went through",
+    "stable",
+]
+must_not_contain = []
+greeting = "Good morning Priya,"

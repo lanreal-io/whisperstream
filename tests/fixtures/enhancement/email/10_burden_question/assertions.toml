@@ -1,0 +1,7 @@
+must_contain = [
+    "latest deck",
+    "standup",
+    "Quick one",
+]
+must_not_contain = []
+greeting = "Hey Priya,"

@@ -1,0 +1,8 @@
+must_contain = [
+    "five",
+    "minutes late",
+]
+must_not_contain = [
+    "I am writing",
+]
+greeting = "none"

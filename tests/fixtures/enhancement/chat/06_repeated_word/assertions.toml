@@ -1,0 +1,7 @@
+must_contain = [
+    "totally agree",
+]
+must_not_contain = [
+    "Yeah, yeah",
+    "yeah, yeah",
+]

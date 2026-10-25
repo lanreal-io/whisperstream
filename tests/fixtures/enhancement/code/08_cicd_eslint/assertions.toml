@@ -1,0 +1,9 @@
+must_contain = [
+    "CI/CD",
+    "ESLint",
+]
+must_not_contain = [
+    "ci slash cd",
+    "eslint can't",
+]
+case_sensitive = true

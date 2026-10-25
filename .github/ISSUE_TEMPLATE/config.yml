@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://whisperstream.io/docs
+    about: Setup guides and answers to common questions.
+  - name: Security problems and private logs
+    url: https://github.com/lanreal-io/whisperstream/blob/main/SECURITY.md
+    about: Report security problems privately by email, not in a public issue.

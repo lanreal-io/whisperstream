@@ -1,0 +1,269 @@
+%PDF-1.4
+%“Œ‹ž ReportLab Generated PDF document (opensource)
+1 0 obj
+<<
+/F1 2 0 R /F2 3 0 R /F3 4 0 R
+>>
+endobj
+2 0 obj
+<<
+/BaseFont /Helvetica /Encoding /WinAnsiEncoding /Name /F1 /Subtype /Type1 /Type /Font
+>>
+endobj
+3 0 obj
+<<
+/BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding /Name /F2 /Subtype /Type1 /Type /Font
+>>
+endobj
+4 0 obj
+<<
+/BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding /Name /F3 /Subtype /Type1 /Type /Font
+>>
+endobj
+5 0 obj
+<<
+/Contents 9 0 R /MediaBox [ 0 0 612 792 ] /Parent 8 0 R /Resources <<
+/Font 1 0 R /ProcSet [ /PDF /Text /ImageB /ImageC /ImageI ]
+>> /Rotate 0 /Trans <<
+
+>> 
+  /Type /Page
+>>
+endobj
+6 0 obj
+<<
+/PageMode /UseNone /Pages 8 0 R /Type /Catalog
+>>
+endobj
+7 0 obj
+<<
+/Author (Lanreal Technologies Inc.) /CreationDate (D:20000101000000+00'00') /Creator (\(unspecified\)) /Keywords () /ModDate (D:20000101000000+00'00') /Producer (ReportLab PDF Library - \(opensource\)) 
+  /Subject (Whisperstream Lockdown Mode HIPAA summary) /Title (Lockdown Mode and HIPAA) /Trapped /False
+>>
+endobj
+8 0 obj
+<<
+/Count 1 /Kids [ 5 0 R ] /Type /Pages
+>>
+endobj
+9 0 obj
+<<
+/Length 7403
+>>
+stream
+1 0 0 1 0 0 cm  BT /F1 12 Tf 14.4 TL ET
+q
+1 0 0 1 52.8 728 cm
+q
+.090196 .196078 .301961 rg
+BT 1 0 0 1 0 3.5 Tm /F2 18.5 Tf 22 TL (Lockdown Mode and HIPAA) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 704.8 cm
+q
+.090196 .196078 .301961 rg
+BT 1 0 0 1 0 2.4 Tm /F2 11.8 Tf 14.2 TL (About this document) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 653.4 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 38.8 Tm /F1 9.6 Tf 12.1 TL (Whisperstream is a local dictation app from Lanreal Technologies Inc. This summary describes the official Windows) Tj T* (and macOS implementation; modified builds require their own assessment. This one-page summary explains the) Tj T* (processing path controlled by Lockdown Mode, the safeguards it includes, and why Lanreal does not act as a business) Tj T* (associate for that path. You can keep this document in your own compliance records.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 632.2 cm
+q
+.090196 .196078 .301961 rg
+BT 1 0 0 1 0 2.4 Tm /F2 11.8 Tf 14.2 TL (What Lockdown Mode covers) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 592.9 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 26.7 Tm /F1 9.6 Tf 12.1 TL (Lockdown Mode keeps Whisperstream transcription, cleanup, and saved history on your device. It does not govern) Tj T* (applications or services that receive your text, or other software running on the device. Evaluate those separately as) Tj T* (part of your compliance program.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 552.1 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 26.7 Tm /F1 9.6 Tf 12.1 TL (Saving transcript history is optional. When you enable it, the password, recovery, encryption, idle-lock and access-log) Tj T* -0.0966 Tw (controls below apply. These controls are designed to support your assessment of certain HIPAA Security Rule technical) Tj T* 0 Tw (safeguards in 45 CFR 164.312:) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 523.4 cm
+q
+BT 1 0 0 1 3 14.6 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 14.6 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Access control \(164.312\(a\)\(1\)\).) Tj /F1 9.6 Tf ( Your transcript history is locked behind a password. A key derived from that) Tj T* (password wraps the encryption key. Your password or recovery key is required to unlock the history.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 496.7 cm
+q
+BT 1 0 0 1 3 14.6 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 14.6 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Automatic logoff \(164.312\(a\)\(2\)\(iii\)\).) Tj /F1 9.6 Tf ( Saved history locks again automatically after a period of inactivity that you) Tj T* (set.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 482.1 cm
+q
+BT 1 0 0 1 3 2.5 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 2.5 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Encryption at rest \(164.312\(a\)\(2\)\(iv\)\).) Tj /F1 9.6 Tf ( Saved transcript text and audio are encrypted at rest with AES-256-GCM.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 455.4 cm
+q
+BT 1 0 0 1 3 14.6 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 14.6 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Audit controls \(164.312\(b\)\).) Tj /F1 9.6 Tf ( A content-free access log records when your history is opened, locked, and unlocked,) Tj T* (and when an unlock fails. It never records what your transcripts say.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 440.8 cm
+q
+BT 1 0 0 1 3 2.5 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 2.5 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Integrity \(164.312\(c\)\).) Tj /F1 9.6 Tf ( Authenticated encryption is designed to detect changes to encrypted transcript content.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 414.1 cm
+q
+BT 1 0 0 1 3 14.6 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 14.6 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Person authentication \(164.312\(d\)\).) Tj /F1 9.6 Tf ( Opening saved history requires your password, and repeated failed attempts) Tj T* (trigger escalating delays.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 392.9 cm
+q
+.090196 .196078 .301961 rg
+BT 1 0 0 1 0 2.4 Tm /F2 11.8 Tf 14.2 TL (Why there is no Business Associate Agreement) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 353.6 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 26.7 Tm /F1 9.6 Tf 12.1 TL -0.06784 Tw (For this defined Whisperstream processing path, Lanreal does not receive your microphone audio, transcript content, or) Tj T* 0 Tw (dictated text and does not act as a business associate. This conclusion does not extend to other applications or) Tj T* (services you use, or support or hosting arrangements that give someone access to protected health information.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 332.4 cm
+q
+.090196 .196078 .301961 rg
+BT 1 0 0 1 0 2.4 Tm /F2 11.8 Tf 14.2 TL (What this is not) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 305.2 cm
+q
+BT 1 0 0 1 3 14.6 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+0 0 0 rg
+BT 1 0 0 1 14 14.6 Tm /F1 9.6 Tf 12.1 TL (This is not a HIPAA certification. The U.S. Department of Health and Human Services does not certify or approve) Tj T* (any product as HIPAA compliant.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 278.5 cm
+q
+BT 1 0 0 1 3 14.6 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+0 0 0 rg
+BT 1 0 0 1 14 14.6 Tm /F1 9.6 Tf 12.1 TL (This is not a compliance guarantee or legal advice. It describes how the software handles your data so you can) Tj T* (evaluate it for your own program.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 257.3 cm
+q
+.090196 .196078 .301961 rg
+BT 1 0 0 1 0 2.4 Tm /F2 11.8 Tf 14.2 TL (What remains your responsibility) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 230.1 cm
+q
+0 0 0 rg
+BT 1 0 0 1 0 14.6 Tm /F1 9.6 Tf 12.1 TL (Lockdown Mode addresses certain technical safeguards. As the covered entity or business associate, you remain) Tj T* (responsible for the rest of your HIPAA program, including:) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 213.5 cm
+q
+BT 1 0 0 1 3 2.5 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 2.5 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Administrative safeguards \(164.308\).) Tj /F1 9.6 Tf ( Your risk analysis, policies, and workforce training.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 198.9 cm
+q
+BT 1 0 0 1 3 2.5 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 2.5 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Physical safeguards \(164.310\).) Tj /F1 9.6 Tf ( Facility access and device controls.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 172.2 cm
+q
+BT 1 0 0 1 3 14.6 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 14.6 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Applications and services.) Tj /F1 9.6 Tf ( Assess applications and services that receive your text, and other software that can) Tj T* (access sensitive information.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 133.4 cm
+q
+BT 1 0 0 1 3 26.7 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 26.7 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Unique user identification.) Tj /F1 9.6 Tf ( Whisperstream relies on your operating-system account to identify the user. Protected) Tj T* (secrets use CurrentUser DPAPI on Windows and Keychain on macOS. The Lockdown password is a second gate) Tj T* (on transcript history, not a separate identity for each person who shares the device.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 106.7 cm
+q
+BT 1 0 0 1 3 14.6 Tm /F1 10 Tf 12 TL 0 0 0 rg (-) Tj ET
+BT 1 0 0 1 14 14.6 Tm 12.1 TL /F2 9.6 Tf 0 0 0 rg (Recovery and deletion.) Tj /F1 9.6 Tf ( If you lose both your password and recovery key, your history can't be restored. Reset) Tj T* (deletes it instead.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 97 cm
+Q
+q
+1 0 0 1 52.8 82.2 cm
+q
+.333333 .333333 .333333 rg
+BT 1 0 0 1 0 2 Tm /F3 7.8 Tf 9.8 TL (Version: October 2026.) Tj T* ET
+Q
+Q
+q
+1 0 0 1 52.8 57.6 cm
+q
+.333333 .333333 .333333 rg
+BT 1 0 0 1 0 11.8 Tm /F3 7.8 Tf 9.8 TL (This summary describes Lockdown Mode's defined Whisperstream processing path. It does not create any contract, warranty, or Business) Tj T* (Associate Agreement.) Tj T* ET
+Q
+Q
+ 
+endstream
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000061 00000 n 
+0000000112 00000 n 
+0000000219 00000 n 
+0000000331 00000 n 
+0000000446 00000 n 
+0000000639 00000 n 
+0000000707 00000 n 
+0000001035 00000 n 
+0000001094 00000 n 
+trailer
+<<
+/ID 
+[<7cf62b8f745507448b400b460e355889><7cf62b8f745507448b400b460e355889>]
+% ReportLab generated PDF document -- digest (opensource)
+
+/Info 7 0 R
+/Root 6 0 R
+/Size 10
+>>
+startxref
+8548
+%%EOF

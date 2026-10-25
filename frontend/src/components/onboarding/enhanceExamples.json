@@ -1,0 +1,54 @@
+{
+  "model": {
+    "id": "stream-1-mini",
+    "revision": "8a26b93930de183051afd4a54cc4e8fc5dc91aa8",
+    "file": "stream-1-mini-q4_k_m.gguf",
+    "sha256": "ec447cdd8dbbcdedca8fe0722db662835a9c6d8b7b9fec6ffd359d057e709910"
+  },
+  "serving_contract": {
+    "prompt_key": "stream-mini",
+    "serving_contract": "wrap-v2",
+    "trained_modes": ["chat", "email"]
+  },
+  "llama_cpp": "b10537",
+  "verified": "2026-10-20: CPU and Vulkan GPU, fresh-install config (output guard enforce), each example both first and after the others on one warm server",
+  "intro": [
+    {
+      "id": "correction",
+      "title": "Catches a change of mind",
+      "profile": "chat",
+      "input": "Can we push the call to three, no wait, four o'clock?",
+      "dropped": "three, no wait,",
+      "expected": "Can we push the call to 4:00?"
+    },
+    {
+      "id": "list",
+      "title": "Lists what you count off",
+      "profile": "chat",
+      "input": "Remember to pack for the trip. First, my passport. Second, a phone charger. And third, a rain jacket.",
+      "expected": "Remember to pack for the trip.\n1. My passport.\n2. A phone charger.\n3. A rain jacket.",
+      "pinned": false,
+      "unpinnedReason": "Stream-1 Mini formats first/second/third lists inconsistently; real output on some runs only. Pin after the fine-tune fix."
+    },
+    {
+      "id": "email",
+      "title": "Shapes a note into an email",
+      "profile": "email",
+      "email": true,
+      "input": "Hey Jordan, just wanted to say the launch went really well. The team did an amazing job. Let's grab lunch next week to celebrate. Cheers, Priya",
+      "expected": "Hey Jordan,\n\nJust wanted to say the launch went really well. The team did an amazing job.\n\nLet's grab lunch next week to celebrate.\n\nCheers,\nPriya"
+    }
+  ],
+  "tryIt": [
+    {
+      "input": "Let's meet tomorrow at three, sorry, actually at four.",
+      "expected": "Let's meet tomorrow at 4:00.",
+      "profile": "chat"
+    },
+    {
+      "input": "Let's book the table for six, scratch that, eight people.",
+      "expected": "Let's book the table for eight people.",
+      "profile": "chat"
+    }
+  ]
+}

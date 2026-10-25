@@ -1,0 +1,1 @@
+auth_middleware should wrap every handler in the API router.

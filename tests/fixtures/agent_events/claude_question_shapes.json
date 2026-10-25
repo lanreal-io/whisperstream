@@ -1,0 +1,35 @@
+{
+  "hook_event_name": "PreToolUse",
+  "tool_name": "AskUserQuestion",
+  "session_id": "fixture-question-session",
+  "tool_input": {
+    "questions": [
+      {
+        "question": "Name the release note",
+        "header": "Release",
+        "options": [
+          {
+            "label": "Use suggested title",
+            "description": "Use the generated release title"
+          }
+        ],
+        "multiSelect": false
+      },
+      {
+        "question": "Choose verification groups",
+        "header": "Checks",
+        "options": [
+          {
+            "label": "Backend",
+            "description": "Run backend contracts"
+          },
+          {
+            "label": "Frontend",
+            "description": "Run interface contracts"
+          }
+        ],
+        "multiSelect": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+must_contain = [
+    "Inotech",
+]
+must_not_contain = [
+    "acme",
+    "or rather",
+]

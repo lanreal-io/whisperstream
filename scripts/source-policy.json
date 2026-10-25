@@ -1,0 +1,715 @@
+{
+  "version": 1,
+  "description": "Public source inclusion policy. Unknown categories and changed opaque assets require maintainer review before upload.",
+  "allowed_roots": [
+    ".github",
+    "LICENSES",
+    "docs",
+    "frontend",
+    "legal",
+    "native",
+    "scripts",
+    "src-tauri",
+    "src",
+    "tests",
+    "vendor"
+  ],
+  "allowed_root_files": [
+    ".gitattributes",
+    ".gitignore",
+    ".python-version",
+    "AUTHORS.md",
+    "CITATION.cff",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "NOTICE",
+    "PREPARATION.md",
+    "README.md",
+    "SECURITY.md",
+    "THIRD_PARTY_LICENSES.txt",
+    "pyproject.toml",
+    "uv.lock",
+    "whisperstream_entry.py"
+  ],
+  "forbidden_components": [
+    ".agents",
+    ".claude",
+    ".interface-design",
+    "plans",
+    "tasks",
+    "handoffs",
+    "research",
+    "training-data",
+    "eval-data",
+    "fixture-studio",
+    "fixture_studio",
+    "screenshots",
+    "captures",
+    "review-evidence",
+    "verification-evidence",
+    "site",
+    ".env",
+    ".worktrees",
+    ".tmp",
+    "review",
+    "evidence",
+    ".git",
+    "node_modules",
+    ".venv",
+    "__pycache__"
+  ],
+  "forbidden_names": [
+    "agents.md",
+    "claude.md",
+    "builds.md",
+    ".env.local",
+    ".env.production"
+  ],
+  "forbidden_patterns": [
+    "(?:^|/)(?:customer|billing|contact)[-_].*\\.(?:csv|jsonl|xlsx)$",
+    "(?:^|/)(?:fixture_studio|finetune|fine_tune|debug_gallery|dev_simulator)(?:[_.\\-/]|$)",
+    "\\.(?:pem|p12|pfx|key|sqlite|sqlite3|db|zip|tar|gz|7z|whl|map)$"
+  ],
+  "text_extensions": [
+    ".py",
+    ".rs",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".json",
+    ".jsonl",
+    ".md",
+    ".txt",
+    ".toml",
+    ".lock",
+    ".yaml",
+    ".yml",
+    ".xml",
+    ".svg",
+    ".css",
+    ".html",
+    ".ini",
+    ".cfg",
+    ".conf",
+    ".cff",
+    ".ps1",
+    ".sh",
+    ".cmd",
+    ".bat",
+    ".nsh",
+    ".patch",
+    ".swift",
+    ".plist",
+    ".sb",
+    ".jinja",
+    ".gitignore",
+    ".gitattributes",
+    ".resolved"
+  ],
+  "allowed_skill_paths": [
+    "src/whisperstream/claude_plugin/skills/name/SKILL.md",
+    "src/whisperstream/claude_plugin/skills/speak/SKILL.md",
+    "src/whisperstream/codex_plugin/skills/speak/SKILL.md"
+  ],
+  "content_rules": [
+    {
+      "id": "private-repository-reference",
+      "pattern": "(?i)(?:github\\.com[/:]|git@github\\.com:)[a-z0-9_.-]+/[a-z0-9_.-]*-private(?=$|[^a-z0-9_-])"
+    },
+    {
+      "id": "personal-machine-path",
+      "pattern": "(?i)(?:[a-z]:[\\\\/]+Users[\\\\/]+(?!Public(?:[\\\\/]|$)|USERNAME(?:[\\\\/]|$)|<)[a-z][a-z0-9._-]*[\\\\/]+(?:Documents|Desktop|Downloads)|/Users/(?!<|username/)[a-z][a-z0-9._-]+/)"
+    },
+    {
+      "id": "private-key-material",
+      "pattern": "-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
+    },
+    {
+      "id": "retired-update-or-mirror-reference",
+      "pattern": "(?i)(?:releases|models)\\.whisperstream\\.io|plugin[-_]updater"
+    }
+  ],
+  "binary_assets": [
+    {
+      "path": "docs/offline/fonts/Outfit-Variable.ttf",
+      "sha256": "fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade",
+      "reason": "Bundled OFL font; THIRD_PARTY_LICENSES.txt sections Outfit/Inter",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "frontend/public/fonts/Inter-Variable.woff2",
+      "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+      "reason": "Bundled OFL font; THIRD_PARTY_LICENSES.txt sections Outfit/Inter",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "frontend/public/fonts/Outfit-Light.woff2",
+      "sha256": "ef88e74f63ce75b54cce4d5a4087c6f180750b9ebae6ab6e5bf2a9939bf6958f",
+      "reason": "Bundled OFL font; THIRD_PARTY_LICENSES.txt sections Outfit/Inter",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "frontend/public/fonts/Outfit-Medium.woff2",
+      "sha256": "fc9bff941def6d924a71632bd8a93190528872eae6414844f3c367ff948d92fd",
+      "reason": "Bundled OFL font; THIRD_PARTY_LICENSES.txt sections Outfit/Inter",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "frontend/public/fonts/Outfit-Regular.woff2",
+      "sha256": "71f028fd2349990b3f8aa643abe767e82e0f596be407ae66f0004ff164121bdb",
+      "reason": "Bundled OFL font; THIRD_PARTY_LICENSES.txt sections Outfit/Inter",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "frontend/public/fonts/Outfit-SemiBold.woff2",
+      "sha256": "8cfe15c2c6de6ef8efff3eedbd52a383ac9ef23d6c23f6cd9f9b838f5f37dc36",
+      "reason": "Bundled OFL font; THIRD_PARTY_LICENSES.txt sections Outfit/Inter",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "frontend/src/assets/logo.png",
+      "sha256": "aa45af1d9ebfb607ec9610b908fbcfc96416c949dce85f11252ce7dd3aad6240",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/128x128.png",
+      "sha256": "81ac9b8f80bee3c93fa6d08cfcc467b8f69e73fa3749d1fa214cc80314d264e5",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/128x128@2x.png",
+      "sha256": "9d6dceba4c456bc5184269dde3b1b00c1e46c9d6d4730b4584c6eed53a211adf",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/32x32.png",
+      "sha256": "89f5c7249080770e4cdfbbed03b69e5f0466511f904aa98753e29afe8952aba4",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/icon.icns",
+      "sha256": "ec367b1d3fe9d993b94ee74b933493cc8d7b1cddfa6191435197e0b551812775",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/icon.ico",
+      "sha256": "3f4bd8319879a7a674b121d4214acacdbed11a03e20709fad4f11849143c797d",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/macos-app-icon-1024.png",
+      "sha256": "df338a8e7ea85b2488e2165ef040f8509c2b41f04d2c77e1f210a6b37821f79b",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/macos-app-icon-128.png",
+      "sha256": "e5ead3865ab95c7c0be896b145c8c66300107f6592af9b5b0612f535915f18f1",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/macos-app-icon-256.png",
+      "sha256": "dfc24c9a0da1460cad79b04b92ca256272e263225c2e45c5eb5729c24db0e113",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/macos-app-icon-32.png",
+      "sha256": "2bfe4b777c1b1f3a4e9e5028181a254b85d754dec6a48b9b8f413b983f110265",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src-tauri/icons/macos-menu-bar-template.png",
+      "sha256": "6ae74c5285d36ed31a8f94dec3d7602008db34f0c95ec379d6ee475dcc148601",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src/whisperstream/assets/silero_vad.onnx",
+      "sha256": "7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49",
+      "reason": "Pinned upstream Silero VAD; vendor/silero-vad/README.md",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src/whisperstream/assets/start.wav",
+      "sha256": "52dfb73b6a10c96d8c9897f6fcfaaf4fd840f75301c634fc3c0d12a41aee764a",
+      "reason": "Shipped start/stop application feedback chime, not a personal recording",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src/whisperstream/assets/stop.wav",
+      "sha256": "d39ae63d0b951f54e28a4e8ddd91dcbe88d2bbb3f1aa24739c3bd7a512538e84",
+      "reason": "Shipped start/stop application feedback chime, not a personal recording",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "src/whisperstream/assets/whisperstream.ico",
+      "sha256": "3f4bd8319879a7a674b121d4214acacdbed11a03e20709fad4f11849143c797d",
+      "reason": "Shipped application branding/icon asset",
+      "approval": "Existing shipped asset retained under approved source cleanup, 2026-10-16"
+    },
+    {
+      "path": "frontend/public/voice-samples/kokoro-af_aoede.ogg",
+      "sha256": "69182324e7193d5ea5e30f5ed9c6d4cf519e5641f6a9100326c351753048fe45",
+      "reason": "Locally generated fixed-text kokoro preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/kokoro-af_bella.ogg",
+      "sha256": "8d56a921cec5688f38a9529647cf3c31f174683da87da68d5a531ab7d561c4b0",
+      "reason": "Locally generated fixed-text kokoro preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/kokoro-af_heart.ogg",
+      "sha256": "32fdc132147b4e18b046527f8d224829361c3e4d1e1dff70540c581a37669bc8",
+      "reason": "Locally generated fixed-text kokoro preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/kokoro-af_kore.ogg",
+      "sha256": "46784276d69da45be48f61cea5bf30ed2cae0be3f246d7429d580ee57ec2588e",
+      "reason": "Locally generated fixed-text kokoro preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/kokoro-af_nicole.ogg",
+      "sha256": "a3c590a1cc6939bfff05ded1a7377e282b4034dab93465d65de865f143d58d9a",
+      "reason": "Locally generated fixed-text kokoro preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/kokoro-af_sarah.ogg",
+      "sha256": "2d8e2b098d848321fb7721ee2ff004150ac5a2bda2ce27b4f6d824560e878b1b",
+      "reason": "Locally generated fixed-text kokoro preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/kokoro-am_fenrir.ogg",
+      "sha256": "5a0b785c1d201550d0c8e86b015b4d224e18127b6a75ba6116b319466f9842cc",
+      "reason": "Locally generated fixed-text kokoro preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/kokoro-am_michael.ogg",
+      "sha256": "65ecc9d1242d963f2dcefafc3b7c3b8f83e65c3ccd73bfd2dcaec149ec21f0c1",
+      "reason": "Locally generated fixed-text kokoro preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/kokoro-am_puck.ogg",
+      "sha256": "bdf6a857cb540b77129bf2d5d39251df58723106fd9b7a43d76342ef43ff56af",
+      "reason": "Locally generated fixed-text kokoro preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-0.ogg",
+      "sha256": "e62bdfb63d532ad31a2953b57485b8351c4fbbd9a5331a05aa43507c8ccbe8f0",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-1.ogg",
+      "sha256": "6043d0fb3b23fdfe3e8ce2ad9079cec6fdb3edf1015d61d62e81abe9203732c8",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-2.ogg",
+      "sha256": "a585fedd70cabaf7b60b28f822d3a5fa345ee1de7a8183d840211766c6151865",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-3.ogg",
+      "sha256": "ba213b2b4fe43e13588850ad98a235cf801f4937a026d71a2a4e7e3ada6174dc",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-4.ogg",
+      "sha256": "f11dfdca008276c0c9fd73686bae5c580315246f12cb8412706aa83977090884",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-5.ogg",
+      "sha256": "b60d32c0d120811b1c99fc10b04d81693549fdc2a0b675a33f328127d787cb82",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-6.ogg",
+      "sha256": "6abbe1cd0f70b6ffb9035cde41b9d0506b7cb1b520aee15876024861f1776070",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-7.ogg",
+      "sha256": "fd50b2a79ef264f9bbf653ef1d5d4cba2f2e789dcf89c86c572f225c9676b3b1",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-8.ogg",
+      "sha256": "88ee6835c004875936f43b00df90e70dcfd0d62bc4d75e9092eb2c35846b9e93",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "frontend/public/voice-samples/supertonic-9.ogg",
+      "sha256": "dd90ea42a7404157a640b6369874ba77a46d1078bfec7539ce949492158bcb20",
+      "reason": "Locally generated fixed-text supertonic preset demonstration; exact model inputs/output identity in voice-samples/manifest.json and docs/voice-previews.md",
+      "approval": "Reviewed generated demonstration scope, selected preset mapping and provenance, 2026-10-20"
+    },
+    {
+      "path": "docs/images/home-light.png",
+      "sha256": "3c66e101fe9776474a825db44e75c2c086d4e7494b2f63522c82d13ef2e16a75",
+      "reason": "README screenshot of the Whisperstream Home tab, captured from source with synthetic usage stats; no personal data",
+      "approval": "Owner-requested README header screenshot, 2026-10-22"
+    },
+    {
+      "path": "docs/images/home-dark.png",
+      "sha256": "bb448dbab7415ab6ce60b13f9dfb3ff2d4b5c5f42c9580370853564659b94080",
+      "reason": "README screenshot of the Whisperstream Home tab, captured from source with synthetic usage stats; no personal data",
+      "approval": "Owner-requested README header screenshot, 2026-10-22"
+    },
+    {
+      "path": "tests/fixtures/synthetic/speech.wav",
+      "sha256": "3b586e4ef743c508b375984fc7fd1914cf3088ab8a0f0ade059e8f698f617c9d",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/synthetic/manifest.json records the generator and text",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/numbers.wav",
+      "sha256": "3af0a0a6a1f82f5aad44e57f4c91770776ba1bbfc956b54b5c4c79a619b9f496",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/raw/one.wav",
+      "sha256": "11eb8924e81762104ec7c9ec32283f1b0196883a8ab4935c6e05574c73f74978",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/raw/two.wav",
+      "sha256": "64d0da29d235eb0ddc876d8e754d144b01616412ed490aa07c79807df7b43f83",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/raw/three.wav",
+      "sha256": "16f844800cdd4c89a447cdedf3ed961c08f4bbd85268beef301d5667cecc5975",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/raw/four.wav",
+      "sha256": "89c5e5403ac7cb54ef82cc0571cce0c96401042c6b0e41e02c2abf58c5ec2e88",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/raw/five.wav",
+      "sha256": "0dd3b4c01b4bb4b8c99c46e337299d71d6fce0d9352ddde5165a810e89d878ca",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/words/one.wav",
+      "sha256": "c19718b3f3bda0af282795898ca376bac66d276bc01789d66c275cde3bbb4213",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/words/two.wav",
+      "sha256": "202993b96aabdcdad27f2a1fb10d0641851c0be3d1c4f5bfe2426768a0f9ccbd",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/words/three.wav",
+      "sha256": "04754e3443839be37d106f367cfca9228d5db8cc41d8ed0f95174e37748716b6",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/words/four.wav",
+      "sha256": "df03c2ce3e5b0faeebb48e09c048767c7a358fd0944642349842bbdde18491ce",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/startup-capture/words/five.wav",
+      "sha256": "45bf7076af3038f8f875ea0648c80f1b1f212b30dcb8ec7e6ac0aa44dba0567d",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; generator and manifest in the same folder",
+      "approval": "Kokoro-generated synthetic test clip; owner pre-authorized Kokoro-generated test clips for public audio pins, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/02_self_correction_time/audio.wav",
+      "sha256": "b094ed0a3b904bd15063cd589c963c4589bbe8d0cfe65f053d9c6f5e9b758465",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/03_slang_preserved/audio.wav",
+      "sha256": "9844e2656de5cdbb42d79fd7654f032bcb4b7dd17bf95ce05da2fe860bc1fa0e",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/04_contractions_preserved/audio.wav",
+      "sha256": "6429fcc43b3542b9afb881dd78bf620b36fe5120ebd36a5d4bd935843d37e133",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/05_filler_heavy/audio.wav",
+      "sha256": "cde7e4b5d5e166a610f828c58336ab06cd09d96b46424e83424426aa07118ce8",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/06_repeated_word/audio.wav",
+      "sha256": "45d0626bcd5b8d2a4bfe42e1726c6aefb72094f20e1dcf07e3ac6dfa06b48593",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/07_meta_command_preserved/audio.wav",
+      "sha256": "a6ec0920867d11fe4d6bb31e06f4604829bff73af16a88f8fd3dd752bdacb20b",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/08_correction_multiple/audio.wav",
+      "sha256": "924d01f9817df6f75e9df91899ea604524f6505ad1dcb3e8a11102904ce22bf9",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/09_emotion_preserved/audio.wav",
+      "sha256": "5ba1e69ed78f0301bb73bdcf72ee23ecf9d36f48cb0298f82668529bec9bfb21",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/10_actually_emphasis/audio.wav",
+      "sha256": "564d144c4126628a5eb52366bd6640a8b47bfe5d9dce2a9f13e45a3584f1ddf3",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/11_slang_stack/audio.wav",
+      "sha256": "ef93fee08fb2de941eac1ddb550da3d10e1604e46cc2af3c2883ab347752a2d3",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/12_short_passthrough/audio.wav",
+      "sha256": "58b6c0f78bc072e10c76370d41209e72e816455d15ea834a6a3188b42904485b",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/13_sorry_correction/audio.wav",
+      "sha256": "0d24b2554a84408a2a7f545667f12bd1742b1c6fea9b4f2f81783326b5e53559",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/14_list_numbered_explicit/audio.wav",
+      "sha256": "a599029b1ac026cb8226c189accb8f7636ee8203902f014dd4388e744c4be51c",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/15_list_first_second_third/audio.wav",
+      "sha256": "680b2ebcf8b4eb03ad0e8704afc14344f0a3d5370228590388d2cd4d299c7c86",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/16_numbers_not_list/audio.wav",
+      "sha256": "20131367054236dd4e2e6179e2409ccbd3d9a2d04c6599f08e65bc7d15e34f6c",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/17_date_spoken/audio.wav",
+      "sha256": "d2453fcedae6319635e9c6f9bb66906a06061d45d4a3984596d473ceaeba3c39",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/18_time_spoken/audio.wav",
+      "sha256": "0070fdbc4a483ee58b68dd51a3b07ff7c8d71c9ebcf7f973cc25940d41701b2b",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/19_i_mean_correction/audio.wav",
+      "sha256": "c0b5cf387c1e6e73afd4a5fe876c7098946e108c2abe9aa1b708f05a0fbe6b68",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/20_scratch_that/audio.wav",
+      "sha256": "04ea385957351fe8ecb6e4062d24f68c3475c75c980a192e428d5e5591d6bb24",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/21_make_that/audio.wav",
+      "sha256": "bbbb2f78499e1602bc952104b6dd1f456648a731933131b0a61e986b790ae3dd",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/chat/22_or_rather/audio.wav",
+      "sha256": "a8114da91407c963bbe84713a24bdc29d529ea6e4db1350be2f83705eb3d1e5b",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/01_async_refactor/audio.wav",
+      "sha256": "b0562f12867fb0f2480c476c6cd84042a1202ba377e97e122ecbfac89aa6140c",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/02_line_and_filename/audio.wav",
+      "sha256": "7fe2655b62cc95c3ff329ce280d77fb7c1d0c301f24ec0f36793414988f87068",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/03_acronyms_and_status/audio.wav",
+      "sha256": "a4adb4068b1b31c63ae62f3ace76b36598979046bf82f2ad62e938dbeb72ee21",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/04_camel_case/audio.wav",
+      "sha256": "2a731fb7dd52a3f8588d45ff05b3b966c7cd4ffbf2aa244fe431ee1b4c78120b",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/05_snake_case/audio.wav",
+      "sha256": "c890d64f36f212a7f552446765757eb96f4c219a70534b42280173223c5b9c9e",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/06_operator_dot_then/audio.wav",
+      "sha256": "72765407a8044d1e11a457ce5c65635abe42992db401cd2f7ca4a2e2fdc7cf50",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/07_version_numbers/audio.wav",
+      "sha256": "379dbf4312819e352807dcb7bfe2dfc3717d00f1f56bd19708f00883a3af5583",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/08_cicd_eslint/audio.wav",
+      "sha256": "57214a7c40003a10c2bfdbe115ab3d34355fe9d05262d17ee84044028d4b7c41",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/09_npm_scoped_package/audio.wav",
+      "sha256": "5300a8a84d933c31057d5bbb057d84c598880947f054f37a56d7dddbab5b0507",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/10_pascal_case_class/audio.wav",
+      "sha256": "f994f0243e885836f8a99d2de8c2d70440ae0d8348e04110ba3996f02f1c7001",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/11_env_constant/audio.wav",
+      "sha256": "7b0d45a8502e6ca9288c84be6bf52d84e6774ee0c9c0944735a2a5a64b68e18f",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/12_no_casing_guess/audio.wav",
+      "sha256": "750ebdab1e1ce10f8ea938645de8c66ca835e5a3bc82b209dcd1ff8072d747c5",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/13_commit_terseness/audio.wav",
+      "sha256": "1bccc1f3a49954c70a7adb5c00cd7bd38f8f58e6f18984ce661b6a79ae1a18fb",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/enhancement/code/14_that_should_be/audio.wav",
+      "sha256": "34f0fe9bc35a9812507637063ae417ba4de7e96c4fb07303872e7073a9cda080",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    },
+    {
+      "path": "tests/fixtures/test.wav",
+      "sha256": "1f9c51065676ba172337ee5c6dc77ba6c413641a3530865cccfcd6781833d222",
+      "reason": "Synthetic speech generated with the Kokoro voice model (voice af_heart), no real voice; tests/fixtures/kokoro-clips.json records the generator, text and hash",
+      "approval": "Kokoro replacement of an old test recording; owner approved publishing these clips, 2026-10-24"
+    }
+  ],
+  "generated_assets": {
+    "pins_file": "scripts/generated-assets.json",
+    "description": "Generated outputs whose current hashes live in the ordinary reviewed pins file, so regenerating them needs ordinary review, not a trust update. Only these paths may be pinned there, and each must start with its signature bytes.",
+    "paths": [
+      {
+        "path": "frontend/src/assets/documentation/Whisperstream-Documentation.pdf",
+        "signature": "%PDF-",
+        "generator": "offline-documentation",
+        "reason": "Shipped offline help document generated from docs/offline/"
+      },
+      {
+        "path": "frontend/src/assets/legal/EULA.pdf",
+        "signature": "%PDF-",
+        "generator": "legal-pdfs",
+        "reason": "Shipped legal document generated from legal/EULA.md"
+      },
+      {
+        "path": "frontend/src/assets/legal/PRIVACY.pdf",
+        "signature": "%PDF-",
+        "generator": "legal-pdfs",
+        "reason": "Shipped legal document generated from legal/PRIVACY.md"
+      },
+      {
+        "path": "frontend/public/hipaa-summary.pdf",
+        "signature": "%PDF-",
+        "generator": "hipaa-summary",
+        "reason": "Informational Lockdown summary generated from docs/security/lockdown-hipaa-summary.md"
+      }
+    ],
+    "approval": "Owner decision 4 of the public parity plan: generated PDF hashes move out of the trusted policy, 2026-10-24"
+  },
+  "gitleaks_version": "8.30.1",
+  "secret_exceptions": [],
+  "forbidden_paths": [
+    "src/whisperstream/macos_phase4_probe.py",
+    "src-tauri/src/macos_phase4_probe.rs",
+    "src-tauri/examples/conpty_diag.rs"
+  ]
+}

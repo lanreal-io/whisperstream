@@ -1,0 +1,7 @@
+must_contain = [
+    "report.pdf",
+]
+must_not_contain = [
+    "so um",
+    "like the one",
+]

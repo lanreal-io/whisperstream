@@ -1,0 +1,21 @@
+Whisperstream
+
+Copyright Lanreal Technologies Inc.
+Lanreal's original contributions in this source edition are licensed under
+GNU General Public License version 3 only (SPDX: GPL-3.0-only).
+The complete license is in LICENSE. This grant does not apply to separately
+licensed third-party components, model weights, fonts or other identified assets.
+
+Whisperstream was developed by Lanreal Technologies Inc., building on Will Hampson's
+Chirp project. The original Copyright (c) 2025 whamp MIT notice is preserved
+verbatim in LICENSES/Chirp-MIT.txt. Retain that notice with upstream-derived code.
+The upstream MIT grant remains available for that material.
+
+The common-password list in src/whisperstream/common_passwords.py is derived from
+SecLists, Copyright (c) 2018 Daniel Miessler, under the MIT License preserved in
+LICENSES/SecLists-MIT.txt.
+
+Third-party notices and license texts are in THIRD_PARTY_LICENSES.txt and
+component-specific vendor and asset directories. Their terms remain in effect.
+The downstream sherpa patch retains its existing Apache-2.0 grant.
+No permission to imply official endorsement or trademark sponsorship is granted.

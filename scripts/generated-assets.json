@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "description": "Current hashes of generated outputs. Public's source policy declares which paths may appear here; update an entry in the same change that regenerates its output.",
+  "assets": [
+    {
+      "path": "frontend/src/assets/documentation/Whisperstream-Documentation.pdf",
+      "sha256": "3e0ce02956af751649dd4195571e970b0f9071af0d00de5c87ff6390e3de7b07",
+      "generator": "npm --prefix docs/offline/toolchain run docs:offline"
+    },
+    {
+      "path": "frontend/src/assets/legal/EULA.pdf",
+      "sha256": "a70846486c5bca7e1247afbee6e8d8a91f705182ca7be38d1af75675378430ca",
+      "generator": "uv run python scripts/generate-legal-pdfs.py"
+    },
+    {
+      "path": "frontend/src/assets/legal/PRIVACY.pdf",
+      "sha256": "77a02c652dab913614d687cd74dec8ddba20f6116cd4e7b0189e9ac0784aea06",
+      "generator": "uv run python scripts/generate-legal-pdfs.py"
+    },
+    {
+      "path": "frontend/public/hipaa-summary.pdf",
+      "sha256": "7b3ae0180e5a540bc77ceb6639475d901aeb61c5aee0532fd36317152e606794",
+      "generator": "uv run python scripts/gen-hipaa-summary-pdf.py"
+    }
+  ]
+}

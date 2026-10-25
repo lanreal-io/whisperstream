@@ -1,0 +1,9 @@
+must_contain = [
+    "60",
+]
+must_not_contain = [
+    "thirty",
+    "sixty",
+    "that should be",
+]
+case_sensitive = true

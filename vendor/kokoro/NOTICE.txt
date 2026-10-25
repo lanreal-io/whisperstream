@@ -1,0 +1,81 @@
+Whisperstream curated Kokoro 82M English voice bundle
+
+This archive is assembled by Whisperstream from separately pinned,
+permissively licensed artifacts. It is not the unmodified output of any one
+upstream project.
+
+Kokoro 82M model and voices
+Copyright and attribution remain with the Kokoro contributors.
+License: Apache License 2.0
+Pinned source model:
+https://huggingface.co/hexgrad/Kokoro-82M/tree/f3ff3571791e39611d31c381e3a41a3af07b4987
+ONNX release artifacts:
+https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.0
+Modifications: the FP32 ONNX graph is copied unchanged. The upstream voice NPZ
+is deterministically reduced to the nine voice presets listed in
+export-manifest.json.
+
+ONNX conversion lineage
+The pinned thewh1teagle release identifies taylorchu/kokoro-onnx as the source
+of the optimized FP32 ONNX graph.
+License: MIT
+Source: https://github.com/taylorchu/kokoro-onnx
+Exact copyright and permission notice:
+licenses/TAYLORCHU-KOKORO-ONNX-MIT.txt
+The release repository's own exact MIT notice is retained in
+licenses/THEWH1TEAGLE-KOKORO-ONNX-MIT.txt. The Kokoro model and voice artifacts
+retain their upstream Apache-2.0 license.
+
+Misaki English lexicons
+Copyright and attribution remain with the Misaki contributors.
+License: Apache License 2.0
+Source:
+https://github.com/hexgrad/misaki/tree/fba1236595f2d2bf21d414ba6e57d25256afada3
+Modifications: only the US gold and silver pronunciation JSON files are
+included. Whisperstream does not distribute the Misaki Python package or its
+dependency closure.
+
+English neural G2P fallback
+Copyright and attribution remain with Peter Reid and contributors.
+License: Apache License 2.0
+Source:
+https://huggingface.co/PeterReid/graphemes_to_phonemes_en_us/tree/a5631b285d18d59483c32c0c3379cb9fac924f4b
+Modifications: the pinned BART model is exported to an ONNX forward graph.
+The export configuration and output hashes are recorded in
+export-manifest.json.
+
+English averaged perceptron tagger data
+Original implementation Copyright 2013 Matthew Honnibal.
+NLTK modifications Copyright 2015 The NLTK Project.
+NLTK port author: Long Duong.
+License: MIT
+Source:
+https://github.com/nltk/nltk_data/tree/550b6625bcef1f2abff2ff770a5a0d272c9c6b2a/packages/taggers
+Implementation source:
+https://github.com/nltk/nltk/blob/3.9.1/nltk/tag/perceptron.py
+Modifications: the three English JSON data files are copied unchanged.
+Whisperstream uses a modified, inference-only implementation. Exact copyright
+and permission notice: licenses/NLTK-PERCEPTRON-MIT.txt
+
+Conservative training-data attribution
+The pinned Kokoro model card identifies Koniwa `tnc` (CC BY 3.0) and SIWIS
+(CC BY 4.0) among the shared model's training sources. None of the nine
+American English voice presets curated into this archive is a Koniwa or SIWIS
+preset. Whisperstream does not redistribute either dataset. Their attribution,
+source links, modification statements, and SIWIS citation are retained in
+licenses/TRAINING-DATA-ATTRIBUTION.txt.
+
+Apache NOTICE search
+No upstream NOTICE text file was found in the pinned Kokoro model snapshot,
+Kokoro source repository, Misaki revision, or PeterReid model snapshot. Apache
+License 2.0 section 4(d) therefore does not add an upstream NOTICE pass-through
+on the reviewed snapshots. The Apache license copy and the modification notices
+required by sections 4(a) through 4(c) are preserved.
+
+This archive's inference frontend does not include or invoke eSpeak,
+espeak-ng, phonemizer, piper-phonemize, num2words, Torch, Transformers, spaCy,
+NLTK, Misaki, or kokoro-onnx. The included data and ONNX graphs are consumed
+by Whisperstream's own lightweight frontend and the ONNX Runtime already used
+by the app. The current official sherpa runtime separately includes native
+eSpeak/Piper components, attributed in Section 2 of the generated third-party
+notices.

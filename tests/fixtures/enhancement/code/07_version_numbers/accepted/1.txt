@@ -1,0 +1,1 @@
+Bumping Next.js to 15.2 and migrating the App Router to React 19.

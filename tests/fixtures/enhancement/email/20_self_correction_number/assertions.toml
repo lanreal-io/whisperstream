@@ -1,0 +1,7 @@
+must_contain = [
+    "250",
+]
+must_not_contain = [
+    "200",
+]
+greeting = "none"

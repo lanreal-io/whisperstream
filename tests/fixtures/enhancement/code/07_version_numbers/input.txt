@@ -1,0 +1,1 @@
+Bumping Next.js to fifteen point two and migrating the app router to React19.

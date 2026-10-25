@@ -1,0 +1,3 @@
+I wanted to introduce you to my colleague Sam, who leads our data team. I think you two should connect since you're both working on the same churn problem.
+
+Sam, I'll let you take it from here.

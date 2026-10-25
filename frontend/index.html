@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/src/assets/logo.png" />
+    <title>Whisperstream Settings</title>
+    <script>
+      (function () {
+        var VALID = ["light", "dark"];
+        var ALIAS = { glacier: "light", "glacier-dark": "dark", classic: "light" };
+        var theme = "light";
+        try {
+          var stored = localStorage.getItem("ws-theme");
+          if (stored && ALIAS[stored]) stored = ALIAS[stored];
+          if (stored && VALID.indexOf(stored) !== -1) theme = stored;
+        } catch (_) {}
+        document.documentElement.setAttribute("data-theme", theme);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

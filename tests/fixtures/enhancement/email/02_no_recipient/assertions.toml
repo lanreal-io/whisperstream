@@ -1,0 +1,6 @@
+must_contain = [
+    "report is done",
+    "shared drive",
+]
+must_not_contain = []
+greeting = "none"

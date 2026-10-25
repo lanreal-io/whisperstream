@@ -1,0 +1,1 @@
+Add a JSON schema validator to the REST endpoint and return a 404 if the user ID is missing.

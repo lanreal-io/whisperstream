@@ -1,0 +1,6 @@
+must_contain = [
+    "referral",
+    "means a lot",
+]
+must_not_contain = []
+greeting = "Hey Greg,"

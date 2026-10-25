@@ -1,0 +1,7 @@
+must_contain = [
+    "great",
+    "leftovers",
+]
+must_not_contain = [
+    "Dinner was leftovers",
+]

@@ -1,0 +1,139 @@
+{
+  "edition": "2.0.0",
+  "articles": [
+    {
+      "id": "install-get-started",
+      "title": "Install and configure Whisperstream",
+      "source": "install-get-started.md"
+    },
+    {
+      "id": "app-basics",
+      "title": "App basics and updates",
+      "source": "app-basics.md"
+    },
+    {
+      "id": "recording-controls",
+      "title": "Recording controls and last-transcript actions",
+      "source": "recording-controls.md"
+    },
+    {
+      "id": "languages-models",
+      "title": "Languages and speech recognition models",
+      "source": "languages-models.md"
+    },
+    {
+      "id": "audio",
+      "title": "Microphone, playback, and system audio",
+      "source": "audio.md"
+    },
+    {
+      "id": "live-preview",
+      "title": "Live Preview",
+      "source": "live-preview.md"
+    },
+    {
+      "id": "text-insertion",
+      "title": "Text insertion and compatibility",
+      "source": "text-insertion.md"
+    },
+    {
+      "id": "dictionary",
+      "title": "Dictionary filters and replacements",
+      "source": "dictionary.md"
+    },
+    {
+      "id": "enhancement-providers",
+      "title": "Local, Ollama, and cloud enhancement providers",
+      "source": "enhancement-providers.md"
+    },
+    {
+      "id": "enhancement-profiles-routing",
+      "title": "Profiles, Email mode, app detection, and site detection",
+      "source": "enhancement-profiles-routing.md"
+    },
+    {
+      "id": "transcript-history",
+      "title": "Transcript and audio history",
+      "source": "transcript-history.md"
+    },
+    {
+      "id": "lockdown-mode",
+      "title": "Lockdown Mode",
+      "source": "lockdown-mode.md"
+    },
+    {
+      "id": "managed-lockdown-deployment",
+      "title": "Managed Lockdown for organizations",
+      "source": "managed-lockdown-deployment.md"
+    },
+    {
+      "id": "agent-speak",
+      "title": "Agent Speak for Codex and Claude Code",
+      "source": "agent-speak.md"
+    },
+    {
+      "id": "coding-agent-sessions",
+      "title": "Managed Codex and Claude Code sessions",
+      "source": "coding-agent-sessions.md"
+    },
+    {
+      "id": "settings-data-locations",
+      "title": "Settings and data locations",
+      "source": "settings-data-locations.md"
+    },
+    {
+      "id": "model-recovery",
+      "title": "Install and recover models offline",
+      "source": "model-recovery.md"
+    }
+  ],
+  "inputs": {
+    "docs/offline/articles/agent-speak.md": "sha256:a26f0d17fdaad357afbb8a653c8ed020a2aaa8d442ab0dbff95793b362c266b7",
+    "docs/offline/articles/app-basics.md": "sha256:8c10de6fc2d270e2d14c085c6a5fdc98e5a9e08c3c08cee4c726ed5b3ebaad9d",
+    "docs/offline/articles/audio.md": "sha256:9ed571f118252a37d6e147870c0b675c5a418dabbb661b1f1ac777100381a455",
+    "docs/offline/articles/coding-agent-sessions.md": "sha256:f54360c1567350e2918b71f9a37502aaf10d05649763095e504a990d2134dbe3",
+    "docs/offline/articles/dictionary.md": "sha256:6ca8f98bdbc6680499b073d4b7a6deb855be26c46fcefa985b2f0ad857cd6c0b",
+    "docs/offline/articles/enhancement-profiles-routing.md": "sha256:135b61be1d4ae9c61b8a4c81b76f70e19eb0c4508ee97b4433a28cdc5975a70c",
+    "docs/offline/articles/enhancement-providers.md": "sha256:958a320ca11036db3fa97141d7e6d8da91895663608a8f05241802c198efa1f8",
+    "docs/offline/articles/install-get-started.md": "sha256:60accca3c67f23bcf5c9858e1e2fc0432a10bb3af15da0d8de3c6c50e942066a",
+    "docs/offline/articles/languages-models.md": "sha256:7c56dbb238f7d3e4abcde347702c2e2084230a0c824b8138417e5642bd47856a",
+    "docs/offline/articles/live-preview.md": "sha256:22394daaf00d3990500323601682bfc8ca0dc3498ac179bcadc96a263b1d19dd",
+    "docs/offline/articles/lockdown-mode.md": "sha256:a87cd9bf3c4e3b29eab50236fb43286ffae2e8f97d5c9e49c535887a4d8b497b",
+    "docs/offline/articles/managed-lockdown-deployment.md": "sha256:eac16341d3a53f27c9780397f90df1ae56bedc67085f0601951517e2a15ad21b",
+    "docs/offline/articles/model-recovery.md": "sha256:48b58e829fdc28fd2f5c3a886471c6168101159fc6fd60597bb7c710549d52e5",
+    "docs/offline/articles/recording-controls.md": "sha256:0438da288bd6b6f67a5d4c7b602c308e07de60a85e9158c2043de1970fe11cb5",
+    "docs/offline/articles/settings-data-locations.md": "sha256:14bf9381d5a273f2d614d5d05b054f17629c115e36a35f52a837db08accc3607",
+    "docs/offline/articles/text-insertion.md": "sha256:4ff1db5ea6ad0a592740a91eaaf607b9b6dd60707112d3155541e01a55a66da6",
+    "docs/offline/articles/transcript-history.md": "sha256:6612e38574bfdc1059a8e4a902adffcc032884327604d847eee74f026575c4be",
+    "docs/offline/fonts/OFL.txt": "sha256:c676351bf8576b9aba743cd5eaa8c0e7ee0d51f805d720447b4df4ddb6a2e416",
+    "docs/offline/fonts/Outfit-Variable.ttf": "sha256:fc7287273e66929776e2ba54f144fe699080bec29f61bf649d70d871468aeade",
+    "docs/offline/print.css": "sha256:7f1a5dac79367d94e815109cc272c68ead00c6c96702b83f7bebe761258ee6de",
+    "docs/offline/toolchain/scripts/export-offline-docs.mjs": "sha256:6420ca5d7b2f8a270d1695c5387dd585bfef44327bb46ff51e3abe629ce5542d",
+    "docs/offline/toolchain/src/DocsMarkdown.tsx": "sha256:b9a633e82288095092c5fa924c36c02209fb468c05f374a6be9aafb2da0e84de",
+    "docs/offline/toolchain/src/articles.ts": "sha256:9f462de18cbabc356af284f71c9d6a92aa888ea6f8b554a41cbbec5b63b4d22a",
+    "docs/offline/toolchain/src/guide.css": "sha256:0da76cc9a2eae5045d8bd340f3c0c4bc08a651b33287f155bd758ff6ba636071",
+    "docs/offline/toolchain/src/tokens.css": "sha256:a91204412ebcd0e78dc2e0b965361fef6aa2067a1967fc91365a925cd0fe6802",
+    "frontend/public/fonts/Inter-Variable.woff2": "sha256:3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62"
+  },
+  "files": {
+    "markdown/install-get-started.md": "sha256:4c4ff3041038239cd57d774805507fc9c62d4d5d8bc955f541f5e88411348c2c",
+    "markdown/app-basics.md": "sha256:3bcf0f11e47140869529ec47a3c42de914fda2c10b5f339747eb825df8b29d43",
+    "markdown/recording-controls.md": "sha256:07b4b94925dbdfb9087aec2a84fa5a349f8d941cffc6aab7e5f676f35d1f8c42",
+    "markdown/languages-models.md": "sha256:3e1ac9376b4347d45599f1e17b7c6a595dce675ac92454e91fde71aae0a635ca",
+    "markdown/audio.md": "sha256:f072750f8422a0d39aeccf79ebd51ab88e47c5edba071e6aa41ba08f71b4e5e3",
+    "markdown/live-preview.md": "sha256:12e67fdc27ab5b74cb05f58caa4b25a91c629231de763f98c30625dd003fb5fd",
+    "markdown/text-insertion.md": "sha256:5ab4a88f237c3f3823ed613dda3ac7a64f74f3a139bafaad37ee3fe5d8c938f6",
+    "markdown/dictionary.md": "sha256:9b245b6ebc5b20ce5128c59b0e0b8c4707e07749d46f6c376dcc6ba38a0d451a",
+    "markdown/enhancement-providers.md": "sha256:6e80f43bed83e2600cb555b582d5c3e59ea4397a7660397ed33db6272d658845",
+    "markdown/enhancement-profiles-routing.md": "sha256:188a3ee953d087c2669ffa1fe24969109b69315862531fe7f3e2d457455c9ea4",
+    "markdown/transcript-history.md": "sha256:1f82fdc8a6c95254251f53bcb1640625a48e69989456d59396a907aa962551b1",
+    "markdown/lockdown-mode.md": "sha256:a93bb911721b46c58a8c9c7189dbbe53b2c0722c5968580c529fe96cfe37d30b",
+    "markdown/managed-lockdown-deployment.md": "sha256:f6847c5044c0ddbbb0cb695cbb49ad372fa0c289a145e9c2df5d18eb1a6953e3",
+    "markdown/agent-speak.md": "sha256:5f371a047771e70e9ee6b74461c7a86a73f3fc62b8bc3545a2b0e822355a19f6",
+    "markdown/coding-agent-sessions.md": "sha256:290be6f11653050a7e0e934f3e77bcbd957133064f8ae3ae2ccc671bf53ac92a",
+    "markdown/settings-data-locations.md": "sha256:9eb19db5c9435fbff523282e54c58fd06fb21c8ec07b6b302a417e9980ead1ae",
+    "markdown/model-recovery.md": "sha256:a11e0b4eda947a1f22b176a5e3db5ce2786a41d3689823b0b74b1bc737022113",
+    "markdown/README.md": "sha256:b9c9f2831ff6143b874f11ec8639e0a9b53b530020f7c9847b1ff407a0fd7e1d",
+    "Whisperstream-Documentation.pdf": "sha256:3e0ce02956af751649dd4195571e970b0f9071af0d00de5c87ff6390e3de7b07"
+  }
+}

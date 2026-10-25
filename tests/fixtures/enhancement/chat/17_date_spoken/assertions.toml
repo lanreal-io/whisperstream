@@ -1,0 +1,7 @@
+must_contain = [
+    "March 3",
+    "noon",
+]
+must_not_contain = [
+    "third",
+]

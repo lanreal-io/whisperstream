@@ -1,0 +1,7 @@
+Hi team,
+
+Quick status update:
+
+1. The API migration is done.
+2. We're halfway through the UI refactor.
+3. Testing kicks off Monday.

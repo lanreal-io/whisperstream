@@ -1,0 +1,128 @@
+[package]
+name = "whisperstream"
+version = "2.0.0"
+edition = "2021"
+default-run = "whisperstream"
+license = "GPL-3.0-only"
+publish = false
+
+[features]
+default = ["official-updater"]
+# The official installer's updater. build.rs compiles it in only when the
+# build names an updater provider, and that build adds the provider's own
+# dependencies to this manifest; source builds have neither.
+official-updater = []
+native-ui-test = ["dep:tauri-plugin-wdio", "dep:tauri-plugin-wdio-webdriver"]
+# Private native checkpoint entry point. The internal builder enables this for
+# the unique ad-hoc bundle identity; ordinary development/release builds omit it.
+macos-phase4-probe = []
+
+[lib]
+name = "whisperstream_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+# Declaring any [[bin]] disables Cargo's autodiscovery of src/main.rs, so the
+# Tauri shell binary must be declared explicitly alongside the CLI wrapper.
+[[bin]]
+name = "whisperstream"
+path = "src/main.rs"
+
+[[bin]]
+name = "whisperstream-cli"
+path = "src/cli/main.rs"
+
+# The headless ConPTY diagnostic retired from the pty-proxy spike is an
+# example target (conpty_diag), NOT a [[bin]]. It was originally a [[bin]] with
+# required-features = ["conpty-diag"], which broke `cargo tauri build`: Cargo
+# honors required-features and skips building it, but Tauri's bundler
+# enumerates every [[bin]] target in this manifest and stats each expected
+# artifact, so it aborted with "failed to bundle project when getting size of
+# target/release/conpty_diag.exe (os error 2)". There is no bundler exclude
+# knob. An example achieves the original intent for real: cargo auto-discovers
+# it, neither `cargo build` nor `cargo tauri build` compiles it, and the
+# bundler never sees it. Run it with `cargo run --example conpty_diag`.
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png", "macos-private-api"] }
+tauri-plugin-shell = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-autostart = "2"
+tauri-plugin-process = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+reqwest = { version = "0.13", default-features = false }
+time = { version = "0.3", features = ["parsing"] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-wdio = { version = "=1.3.0", optional = true }
+tauri-plugin-wdio-webdriver = { version = "=1.3.0", optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+portable-pty = "0.9"
+anyhow = "1"
+# Blocking HTTP client for the CLI wrapper's bridge to the backend (Task
+# 3.1). Deliberately ureq, not reqwest: the wrapper must never pull an async
+# runtime into a process whose entire job is a synchronous byte relay.
+ureq = { version = "2", default-features = false }
+# Per-run correlation token minting (Task 3.1). Already present transitively
+# (portable-pty/tauri pull it in); pinning it directly avoids hand-rolling
+# OS RNG access a second time.
+getrandom = "0.2"
+
+[dev-dependencies]
+tauri = { version = "2", features = ["test"] }
+
+# SetWindowPos, so the HUD's native position and size land in ONE atomic call,
+# plus SetWindowRgn/CreateRectRgn for the compact HUD's native hit/paint region.
+# Two separate Tauri calls (setPosition then setSize) leave a visible frame where
+# the window has moved to the new origin while still at the old size. Version
+# tracks the `windows` crate Tauri/tao already pull in, so `WebviewWindow::hwnd()`
+# hands back an HWND of exactly this crate's type (no duplicate-version mismatch).
+# Win32_System_Console backs the CLI wrapper's console-mode handling; it must
+# stay on this same `windows` crate rather than a second `windows-sys`
+# dependency, or the two Win32 crate versions mismatch exactly as this comment
+# warns against.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Threading",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_System_Console",
+    "Win32_System_Threading",
+    "Win32_System_SystemInformation",
+    "Win32_System_Diagnostics_ToolHelp",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
+objc2 = "0.6.3"
+objc2-app-kit = { version = "0.3.2", default-features = false, features = [
+    "std",
+    "NSApplication",
+    "NSOpenPanel",
+    "NSPanel",
+    "NSResponder",
+    "NSRunningApplication",
+    "NSWorkspace",
+    "NSSavePanel",
+    "NSTrackingArea",
+    "NSView",
+    "NSWindow",
+] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = [
+    "NSDate",
+    "NSNotification",
+    "NSObjCRuntime",
+    "NSProcessInfo",
+    "NSRunLoop",
+    "NSString",
+    "NSTimer",
+] }
+objc2-service-management = "0.3.2"

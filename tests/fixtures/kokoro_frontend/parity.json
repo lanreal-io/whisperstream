@@ -1,0 +1,43 @@
+{
+  "source": {
+    "component": "Misaki English frontend",
+    "commit": "fba1236595f2d2bf21d414ba6e57d25256afada3",
+    "license": "Apache-2.0"
+  },
+  "cases": [
+    {
+      "id": "record-homograph",
+      "parity": "exact",
+      "text": "Record the record.",
+      "expected": "ɹəkˈɔɹd ðə ɹˈɛkəɹd."
+    },
+    {
+      "id": "read-tense",
+      "parity": "exact",
+      "text": "I read the response yesterday. I will read it now.",
+      "expected": "ˌI ɹˈɛd ðə ɹəspˈɑns jˈɛstəɹdˌA. ˌI wɪl ɹˈid ɪt nˈW."
+    },
+    {
+      "id": "weak-forms",
+      "parity": "exact",
+      "text": "The agent opened an issue.",
+      "expected": "ði ˈAʤᵊnt ˈOpᵊnd ɐn ˈɪʃu."
+    },
+    {
+      "id": "imperative-object",
+      "parity": "reviewed-improvement",
+      "text": "Object to the object.",
+      "upstream": "ˈɑbʤəkt tə ði ˈɑbʤəkt.",
+      "expected": "əbʤˈɛkt tə ði ˈɑbʤəkt.",
+      "rationale": "A sentence-initial imperative is a verb; the compact tagger override fixes the upstream noun mis-tag."
+    },
+    {
+      "id": "clock-time",
+      "parity": "reviewed-improvement",
+      "text": "3:30.",
+      "upstream": "ˈæksˌiz.",
+      "expected": "θɹˈi θˈɜɹTi.",
+      "rationale": "The owned normalizer recognizes clock syntax instead of sending punctuation-like digits through a word fallback."
+    }
+  ]
+}

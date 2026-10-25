@@ -1,0 +1,7 @@
+must_contain = [
+    "1,250",
+    "May 9",
+    "3:30",
+]
+must_not_contain = []
+greeting = "none"

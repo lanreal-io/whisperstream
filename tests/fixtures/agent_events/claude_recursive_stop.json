@@ -1,0 +1,7 @@
+{
+  "hook_event_name": "Stop",
+  "last_assistant_message": "Synthetic completion.\n🔊 Synthetic completion ready.",
+  "session_id": "fixture-recursive-session",
+  "prompt_id": "fixture-recursive-prompt",
+  "stop_hook_active": true
+}

@@ -1,0 +1,16 @@
+{
+  "name": "whisperstream",
+  "version": "1.1.1",
+  "description": "Connects Codex sessions to the local Whisperstream HUD.",
+  "author": {
+    "name": "Whisperstream"
+  },
+  "license": "GPL-3.0-only",
+  "keywords": [
+    "dictation",
+    "speech",
+    "agent-speech"
+  ],
+  "skills": "./skills/",
+  "hooks": "./hooks/hooks.json"
+}

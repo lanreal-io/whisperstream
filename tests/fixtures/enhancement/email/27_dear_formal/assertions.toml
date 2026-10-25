@@ -1,0 +1,6 @@
+must_contain = [
+    "opportunity to interview",
+    "interest in the role",
+]
+must_not_contain = []
+greeting = "Dear hiring manager,"

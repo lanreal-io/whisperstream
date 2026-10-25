@@ -1,0 +1,6 @@
+must_contain = [
+    "redesign",
+    "Q3",
+]
+must_not_contain = []
+greeting = "none"
