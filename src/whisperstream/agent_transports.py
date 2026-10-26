@@ -7,10 +7,23 @@ No packet body, session identifier or reply may be logged.
 
 from __future__ import annotations
 
+import hashlib
 import re
+import threading
+import time
+from collections import OrderedDict
+from typing import Callable
 
 from .agent_runtime_compatibility import CLAUDE_MOD_MINIMUM, meets_minimum, release_version
 from .agent_session_names import bounded_session_key
+
+#: A mod that has not polled for this long no longer owns its session's Stop
+#: hook (``ManagedSession.is_fresh``); gaps at or past it are worth a log line.
+MOD_POLL_GAP_LOG_SECONDS = 8.0
+#: Backstop for a hook-delivered turn the mod never re-sends. The usual end
+#: is the session's next prompt, after which the mod cannot send older turns.
+HOOK_DELIVERED_TTL_SECONDS = 30.0 * 60.0
+MAX_TRACKED_SESSIONS = 64
 
 
 def accept_claude_packet(store, body: object):
@@ -89,3 +102,113 @@ def accept_claude_packet(store, body: object):
     if reply is not None:
         store.mark_replied(session.session_handle)
     return session, {"ok": True, "handle": session.session_handle, "reply": reply}, event
+
+
+def _turn_digest(session_id: str, text: str) -> str:
+    return hashlib.sha256(
+        f"{session_id}\0{text}".encode("utf-8", errors="surrogatepass")
+    ).hexdigest()
+
+
+class HookDeliveredTurns:
+    """Turns the Stop hook delivered while the session's mod looked absent.
+
+    A mod whose timer is paused (a background session) cannot claim the Stop
+    hook, so the hook speaks the turn. The paused mod still holds that turn
+    and sends it when its timer resumes, seconds or minutes later. ``consume``
+    lets the transport drop that one re-send. Each hook delivery cancels at
+    most one mod completion, and a session's records end at its next prompt,
+    so an equal answer in a later turn is never dropped.
+
+    # ========================================================================
+    # TRANSCRIPT DATA - DO NOT LOG
+    # Only a fixed-size SHA-256 digest of session ID and text is retained.
+    # ========================================================================
+    """
+
+    def __init__(
+        self,
+        *,
+        ttl_seconds: float = HOOK_DELIVERED_TTL_SECONDS,
+        max_sessions: int = MAX_TRACKED_SESSIONS,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self._ttl_seconds = float(ttl_seconds)
+        self._max_sessions = max_sessions
+        self._clock = clock
+        self._lock = threading.Lock()
+        # session_id -> {digest: delivered_at}
+        self._turns: "OrderedDict[str, dict[str, float]]" = OrderedDict()
+
+    def record(self, session_id: object, text: object) -> None:
+        if not isinstance(session_id, str) or not session_id or not isinstance(text, str):
+            return
+        with self._lock:
+            turns = self._turns.setdefault(session_id, {})
+            turns[_turn_digest(session_id, text)] = self._clock()
+            self._turns.move_to_end(session_id)
+            while len(self._turns) > self._max_sessions:
+                self._turns.popitem(last=False)
+
+    def consume(self, session_id: object, text: object) -> bool:
+        """True exactly once for a turn the hook already delivered."""
+        if not isinstance(session_id, str) or not session_id or not isinstance(text, str):
+            return False
+        with self._lock:
+            turns = self._turns.get(session_id)
+            if not turns:
+                return False
+            delivered_at = turns.pop(_turn_digest(session_id, text), None)
+            if not turns:
+                self._turns.pop(session_id, None)
+            return (
+                delivered_at is not None
+                and self._clock() - delivered_at <= self._ttl_seconds
+            )
+
+    def forget_session(self, session_id: object) -> None:
+        with self._lock:
+            self._turns.pop(session_id, None)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._turns.clear()
+
+
+class ModPollGaps:
+    """Seconds between one session's mod packets, across route reaps.
+
+    The routing record is dropped once its poll goes stale, so the gap is kept
+    here by session. Only timings are observable; nothing here is logged.
+    """
+
+    def __init__(
+        self,
+        *,
+        max_sessions: int = MAX_TRACKED_SESSIONS,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self._max_sessions = max_sessions
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._last_packet: "OrderedDict[str, float]" = OrderedDict()
+
+    def observe(self, session_id: object) -> float | None:
+        """Record a packet and return the gap since the previous one."""
+        if not isinstance(session_id, str) or not session_id:
+            return None
+        now = self._clock()
+        with self._lock:
+            previous = self._last_packet.pop(session_id, None)
+            self._last_packet[session_id] = now
+            while len(self._last_packet) > self._max_sessions:
+                self._last_packet.popitem(last=False)
+        return None if previous is None else now - previous
+
+    def seen(self, session_id: object) -> bool:
+        with self._lock:
+            return isinstance(session_id, str) and session_id in self._last_packet
+
+    def clear(self) -> None:
+        with self._lock:
+            self._last_packet.clear()

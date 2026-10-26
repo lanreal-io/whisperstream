@@ -5,7 +5,7 @@ import time
 import pytest
 
 from tests.test_agent_transports import packet
-from tests.test_claude_hook_endpoint import _make_client, _make_mock_config, STOP_CLAUDE
+from tests.test_claude_hook_endpoint import _make_client, _make_mock_config, PROMPT_SUBMIT, STOP_CLAUDE
 
 pytestmark = pytest.mark.usefixtures("accepted_eula")
 
@@ -245,3 +245,115 @@ async def test_pause_during_completion_cannot_publish_a_reply(monkeypatch):
     assert await endpoint(request) == {}
     server._clear_agent_speak_state(reason='test_cleanup')
     client.close()
+
+
+TURN = "Merged the PR.\n🔊 Merged the PR and cleaned up."
+
+
+def _published_turns(server, monkeypatch):
+    published = []
+    original = server._publish_blocking_claude_response
+
+    def spy(result):
+        published.append(result.get("spoken_summary"))
+        return original(result)
+
+    monkeypatch.setattr(server, "_publish_blocking_claude_response", spy)
+    return published
+
+
+def _stale_mod_session(client, server):
+    """Connect a mod for claude-1, then let its poll go stale (a paused timer)."""
+    handle = client.post("/api/agent-transport/claude", json=packet(session_id="claude-1")).json()["handle"]
+    for session in server._get_managed_sessions().sessions():
+        session.last_seen -= 60
+    return handle
+
+
+def _hook_stop(client, text=TURN):
+    return client.post("/api/claude-hook", json={**STOP_CLAUDE, "last_assistant_message": text})
+
+
+def test_mod_resend_of_a_hook_delivered_turn_is_dropped(monkeypatch):
+    client, server = _make_client(config=_make_mock_config(claude_reply_grace_seconds=0))
+    try:
+        published = _published_turns(server, monkeypatch)
+        handle = _stale_mod_session(client, server)
+        assert _hook_stop(client).status_code == 200
+        assert published == ["Merged the PR and cleaned up."]
+        # The paused mod resumes and sends the turn it was holding.
+        resumed = client.post("/api/agent-transport/claude", json=packet(
+            session_id="claude-1", action="poll", handle=handle, sequence=2,
+            completion={"text": TURN, "turn_id": "turn-native"})).json()
+        assert resumed["ok"]
+        assert published == ["Merged the PR and cleaned up."]
+    finally:
+        server._clear_agent_speak_state(reason="test_cleanup")
+        client.close()
+
+
+def test_mod_resend_after_its_route_was_reaped_is_dropped(monkeypatch):
+    client, server = _make_client(config=_make_mock_config(claude_reply_grace_seconds=0))
+    try:
+        published = _published_turns(server, monkeypatch)
+        _stale_mod_session(client, server)
+        server._get_managed_sessions().reap(probe_pids=False)
+        assert _hook_stop(client).status_code == 200
+        # Minutes later the reopened session's mod reconnects with the turn.
+        client.post("/api/agent-transport/claude", json=packet(
+            session_id="claude-1", instance="b" * 32,
+            completion={"text": TURN, "turn_id": "turn-native"}))
+        assert published == ["Merged the PR and cleaned up."]
+    finally:
+        server._clear_agent_speak_state(reason="test_cleanup")
+        client.close()
+
+
+def test_equal_answer_in_a_later_turn_is_still_delivered(monkeypatch):
+    client, server = _make_client(config=_make_mock_config(claude_reply_grace_seconds=0))
+    try:
+        published = _published_turns(server, monkeypatch)
+        handle = _stale_mod_session(client, server)
+        _hook_stop(client)
+        # The user moved on; the mod's queue was emptied by the new prompt.
+        client.post("/api/claude-hook", json={**PROMPT_SUBMIT, "prompt": "again"})
+        client.post("/api/agent-transport/claude", json=packet(
+            session_id="claude-1", action="poll", handle=handle, sequence=2,
+            completion={"text": TURN, "turn_id": "turn-later"}))
+        assert published == ["Merged the PR and cleaned up."] * 2
+    finally:
+        server._clear_agent_speak_state(reason="test_cleanup")
+        client.close()
+
+
+def test_fresh_mod_still_owns_the_stop_and_delivers_once(monkeypatch):
+    client, server = _make_client(config=_make_mock_config(claude_reply_grace_seconds=0))
+    try:
+        published = _published_turns(server, monkeypatch)
+        handle = client.post("/api/agent-transport/claude", json=packet(session_id="claude-1")).json()["handle"]
+        assert _hook_stop(client).json() == {}
+        assert published == []
+        client.post("/api/agent-transport/claude", json=packet(
+            session_id="claude-1", action="poll", handle=handle, sequence=2,
+            completion={"text": TURN, "turn_id": "turn-native"}))
+        assert published == ["Merged the PR and cleaned up."]
+    finally:
+        server._clear_agent_speak_state(reason="test_cleanup")
+        client.close()
+
+
+def test_mod_poll_gap_is_logged_without_session_identity(caplog):
+    client, server = _make_client()
+    try:
+        handle = _stale_mod_session(client, server)
+        server._get_claude_mod_poll_gaps()._last_packet["claude-1"] -= 60
+        with caplog.at_level("INFO"):
+            client.post("/api/agent-transport/claude", json=packet(
+                session_id="claude-1", action="poll", handle=handle, sequence=2))
+        lines = [r.getMessage() for r in caplog.records if "[ClaudeMod] poll gap" in r.getMessage()]
+        assert len(lines) == 1
+        assert "reconnect=false state=idle" in lines[0]
+        assert "claude-1" not in lines[0]
+    finally:
+        server._clear_agent_speak_state(reason="test_cleanup")
+        client.close()

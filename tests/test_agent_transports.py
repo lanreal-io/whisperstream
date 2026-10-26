@@ -95,3 +95,34 @@ def test_unobserved_busy_turn_still_invalidates_old_reply_on_revision_change():
     assert store.take_pending_reply(session.session_handle) is None
 
 
+
+
+def test_hook_delivered_turn_cancels_one_mod_completion():
+    from whisperstream.agent_transports import HookDeliveredTurns
+
+    now = [0.0]
+    turns = HookDeliveredTurns(ttl_seconds=60, clock=lambda: now[0])
+    turns.record("s", "Done.")
+    assert not turns.consume("other", "Done.")
+    assert not turns.consume("s", "Different.")
+    assert turns.consume("s", "Done.")
+    assert not turns.consume("s", "Done.")
+    turns.record("s", "Done.")
+    turns.forget_session("s")
+    assert not turns.consume("s", "Done.")
+    turns.record("s", "Done.")
+    now[0] = 61.0
+    assert not turns.consume("s", "Done.")
+
+
+def test_mod_poll_gap_tracks_sessions_independently():
+    from whisperstream.agent_transports import ModPollGaps
+
+    now = [0.0]
+    gaps = ModPollGaps(max_sessions=1, clock=lambda: now[0])
+    assert gaps.observe("s") is None
+    now[0] = 12.5
+    assert gaps.observe("s") == 12.5
+    assert gaps.seen("s")
+    gaps.observe("t")
+    assert not gaps.seen("s")
