@@ -8,7 +8,8 @@ export type WindowRootId =
   | "eula-popup"
   | "error-popup"
   | "dialog-showcase"
-  | "ui-qa-showcase";
+  | "ui-qa-showcase"
+  | "demo-stage";
 
 const WINDOW_ROOTS: Readonly<Record<string, WindowRootId>> = {
   "/": "app",
@@ -49,7 +50,10 @@ export const WINDOW_ROOT_MODULE_SUFFIXES = {
 } as const satisfies Record<
   // The update popup comes from the build's edition, which names its own
   // window roots for the split guard (see edition.ts).
-  Exclude<WindowRootId, "update-popup" | "dialog-showcase" | "ui-qa-showcase">,
+  Exclude<
+    WindowRootId,
+    "update-popup" | "dialog-showcase" | "ui-qa-showcase" | "demo-stage"
+  >,
   string
 >;
 
@@ -69,6 +73,9 @@ export function resolveWindowRoot(
   }
   if (development && pathname === "/debug/ui-qa") {
     return "ui-qa-showcase";
+  }
+  if (development && pathname === "/debug/demo") {
+    return "demo-stage";
   }
   return WINDOW_ROOTS[pathname] ?? "app";
 }

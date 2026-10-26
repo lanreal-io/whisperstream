@@ -17,6 +17,7 @@ const DEV_ONLY_MODULES = [
   "/src/pages/DialogShowcase.tsx",
   "/src/dev/dialogRegistry.tsx",
   "/src/pages/hud/HudAgentMarkComparison.tsx",
+  "/src/dev/demo/DemoStage.tsx",
 ] as const;
 
 interface TauriWindowConfig {

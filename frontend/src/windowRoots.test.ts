@@ -29,6 +29,11 @@ describe("resolveWindowRoot", () => {
     expect(resolveWindowRoot("/debug/ui-qa", false)).toBe("app");
   });
 
+  it("keeps the demo stage development-only", () => {
+    expect(resolveWindowRoot("/debug/demo", true)).toBe("demo-stage");
+    expect(resolveWindowRoot("/debug/demo", false)).toBe("app");
+  });
+
   it("falls back to the settings app for unknown paths", () => {
     expect(resolveWindowRoot("/future-window", false)).toBe("app");
   });

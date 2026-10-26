@@ -124,7 +124,12 @@ import {
   hasSessionStrip,
   sessionShortcutIndex,
 } from "../lib/agentSessions";
-import { useForcedHudState, forcedStateById, hudForcedStateQaId } from "./hud/hudForceState";
+import {
+  useForcedHudState,
+  forcedStateById,
+  hudForcedStateQaId,
+  type HudForcedState,
+} from "./hud/hudForceState";
 import {
   readRecordingControlVisibility,
   readScreenReaderStatus,
@@ -290,9 +295,15 @@ export interface HudProps {
    * this does not write localStorage and is owned by this mounted HUD.
    */
   uiQaFixtureId?: string;
+  /**
+   * Dev-only frozen state supplied directly rather than by registry id, for
+   * the marketing demo stage's scripted copy. Takes precedence over
+   * `uiQaFixtureId`.
+   */
+  demoForcedState?: HudForcedState;
 }
 
-export function HUD({ uiQaFixtureId }: HudProps = {}) {
+export function HUD({ uiQaFixtureId, demoForcedState }: HudProps = {}) {
   const { connected, send, subscribe, connectionGeneration } = useAppSocket();
   const dedicatedRecordingControlWindow =
     usesDedicatedRecordingControlWindow();
@@ -347,12 +358,15 @@ export function HUD({ uiQaFixtureId }: HudProps = {}) {
   // state can be held still and looked at instead of expiring with its reply
   // window. Null in production, where the hook is dead code.
   const transportedForcedHudState = useForcedHudState();
-  const exactRouteForcedHudState =
-    import.meta.env.DEV && uiQaFixtureId !== undefined
-      ? forcedStateById(uiQaFixtureId)
-      : null;
+  const exactRouteForcedHudState = !import.meta.env.DEV
+    ? null
+    : demoForcedState !== undefined
+      ? demoForcedState
+      : uiQaFixtureId !== undefined
+        ? forcedStateById(uiQaFixtureId)
+        : null;
   const forcedHudState =
-    uiQaFixtureId === undefined
+    uiQaFixtureId === undefined && demoForcedState === undefined
       ? transportedForcedHudState
       : exactRouteForcedHudState;
   const uiQaStateId =

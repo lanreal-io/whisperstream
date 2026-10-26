@@ -51,6 +51,12 @@ const loadDialogShowcaseRoot = loadShowcaseModule
 const loadUiQaShowcaseRoot = loadShowcaseModule
   ? async () => (await loadShowcaseModule()).UiQaShowcase
   : null;
+// The marketing demo stage is optional development tooling in the same way.
+const loadDemoStageModule = import.meta.env.DEV
+  ? import.meta.glob<{ DemoStage: ComponentType }>("./dev/demo/DemoStage.tsx")[
+      "./dev/demo/DemoStage.tsx"
+    ]
+  : undefined;
 
 function assertUnreachableWindowRoot(rootId: never): never {
   throw new Error(`Window root has no dynamic loader: ${String(rootId)}`);
@@ -85,6 +91,10 @@ async function loadWindowRoot(): Promise<ComponentType> {
     case "ui-qa-showcase":
       return loadUiQaShowcaseRoot
         ? loadUiQaShowcaseRoot()
+        : (await import("./App")).default;
+    case "demo-stage":
+      return loadDemoStageModule
+        ? (await loadDemoStageModule()).DemoStage
         : (await import("./App")).default;
     case "app":
       return (await import("./App")).default;
