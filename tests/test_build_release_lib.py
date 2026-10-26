@@ -660,6 +660,50 @@ class TestExtractChangelogNotes:
         assert "upcoming" not in notes
 
 
+PLATFORM_CHANGELOG = """\
+## [2.0.1] - 2026-10-27
+
+### Fixed
+
+- Shared fix.
+- [Mac] Mac fix.
+- [Windows] Windows fix
+  that wraps onto a second line.
+
+### Mac
+
+- [mac] Native window polish.
+"""
+
+
+class TestChangelogPlatformFilter:
+    """Platform-tagged bullets reach only their own platform's update feed."""
+
+    def test_no_platform_keeps_every_line(self):
+        notes = b.extract_changelog_notes("2.0.1", PLATFORM_CHANGELOG)
+        assert "[Mac] Mac fix." in notes and "[Windows] Windows fix" in notes
+
+    def test_mac_keeps_shared_and_mac_lines_without_tags(self):
+        notes = b.extract_changelog_notes("2.0.1", PLATFORM_CHANGELOG, platform="mac")
+        assert notes == (
+            "### Fixed\n\n- Shared fix.\n- Mac fix.\n\n### Mac\n\n- Native window polish."
+        )
+
+    def test_windows_drops_mac_lines_continuations_and_empty_headings(self):
+        notes = b.extract_changelog_notes("2.0.1", PLATFORM_CHANGELOG, platform="windows")
+        assert notes == (
+            "### Fixed\n\n- Shared fix.\n- Windows fix\n  that wraps onto a second line."
+        )
+
+    def test_section_with_only_other_platform_lines_returns_none(self):
+        text = "## [2.0.1]\n\n- [Mac] Only Mac.\n"
+        assert b.extract_changelog_notes("2.0.1", text, platform="windows") is None
+
+    def test_unknown_platform_is_rejected(self):
+        with pytest.raises(ValueError):
+            b.extract_changelog_notes("2.0.1", PLATFORM_CHANGELOG, platform="linux")
+
+
 # ---------------------------------------------------------------------------
 # build_latest_manifest
 # ---------------------------------------------------------------------------

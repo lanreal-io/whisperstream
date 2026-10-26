@@ -506,7 +506,7 @@ def _write_update_bundle(
         raise MacInternalBuildError(f"cannot derive the update URL: {exc}") from exc
     changelog = REPO_ROOT / "CHANGELOG.md"
     notes = (
-        extract_changelog_notes(version, changelog.read_text(encoding="utf-8"))
+        extract_changelog_notes(version, changelog.read_text(encoding="utf-8"), platform="mac")
         if changelog.is_file() else None
     )
     manifest = build_update_manifest(
