@@ -2,6 +2,9 @@
 let instance = '', sessionId = '', handle = '', sequence = 0, revision = 0;
 let busy = true, ended = false, polling = false, timer = null, submitting = null, pluginVersion = '';
 let pending = [];
+// A held answer older than this is not spoken. It covers a short delivery delay,
+// not a Whisperstream restart: the turn finished while nothing could speak it.
+const MAX_HELD_MS = 30000;
 const newInstance = () => Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
 const reset = (id) => {
   instance = newInstance(); sessionId = id; handle = ''; sequence = 0;
@@ -43,7 +46,10 @@ async function tick($) {
     const proof = await $.http.fetch(`${url}/api/agent-hook/verify`, { headers });
     if (!proof.ok || proof.text.length > 4096 || JSON.parse(proof.text).ok !== true) return;
     const epoch = revision, currentInstance = instance, currentId = sessionId;
-    const completion = !busy ? pending[0] : null;
+    const now = Date.now();
+    pending = pending.filter((item) => now - item.at <= MAX_HELD_MS);
+    const held = !busy ? pending[0] : null;
+    const completion = held && { text: held.text, turn_id: held.turn_id };
     const packet = {
       action: handle ? 'poll' : 'connect', instance, handle, session_id: currentId,
       sequence: ++sequence, revision: epoch, surface, engine_version: version.version,
@@ -71,7 +77,7 @@ async function tick($) {
     }
     if (result.ok !== true || typeof result.handle !== 'string') return;
     handle = result.handle;
-    if (completion && pending[0] === completion) pending.shift();
+    if (held && pending[0] === held) pending.shift();
     if (typeof result.reply !== 'string' || !result.reply.trim() || result.reply.length > 10000) return;
     if (busy || epoch !== revision || ended) return;
     submitting = { text: result.reply, revision: epoch };
@@ -125,7 +131,7 @@ export function register(on) {
       if (id !== sessionId) reset(id);
       busy = false; revision++;
       if (!e.isAborted && typeof e.answer === 'string' && e.answer.trim()) {
-        pending.push({ text: e.answer.slice(0, 200000), turn_id: e.turnId });
+        pending.push({ text: e.answer.slice(0, 200000), turn_id: e.turnId, at: Date.now() });
         while (pending.length > 4 || pending.reduce((n, item) => n + item.text.length, 0) > 200000) pending.shift();
       }
     }

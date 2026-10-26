@@ -106,6 +106,27 @@ test('backend restart retains an unsent completion but replaces the connection i
   assert.notEqual(h.packets[0].instance, h.packets.at(-1).instance);
 });
 
+test('an answer held past the age cap is dropped instead of spoken on reconnect', async (t) => {
+  let now = 1_000_000;
+  t.mock.method(Date, 'now', () => now);
+  const h = harness();
+  await h.emit('session.start');
+  h.setProof(false); // Whisperstream is not running when the turn finishes.
+  await h.emit('turn.complete', { answer: 'Old answer', turnId: 'turn-a' });
+  await h.poll();
+  now += 30_001;
+  h.setProof(true);
+  await h.poll();
+  assert.equal(h.packets.length, 1);
+  assert.equal(h.packets[0].state, 'idle');
+  assert.equal(h.packets[0].completion, undefined);
+  await h.emit('turn.start');
+  await h.emit('turn.complete', { answer: 'Fresh answer', turnId: 'turn-b' });
+  now += 30_000; // At the cap is still deliverable.
+  await h.poll();
+  assert.deepEqual(h.packets.at(-1).completion, { text: 'Fresh answer', turn_id: 'turn-b' });
+});
+
 test('proof failure, remote-only and wrapped sessions cannot forward content', async () => {
   for (const h of [harness({ wrapper: true }), harness({ surface: 'remote' }), harness()]) {
     h.setProof(false);
