@@ -18,7 +18,6 @@
         "height": 680,
         "resizable": false,
         "decorations": false,
-        "trafficLightPosition": { "x": 22, "y": 26 },
         "center": true,
         "dragDropEnabled": true,
         "visible": false
