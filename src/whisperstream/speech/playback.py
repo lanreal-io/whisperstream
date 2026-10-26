@@ -768,6 +768,10 @@ class PlaybackOwner:
                 stream.write(frames.reshape(-1, 1))
                 wrote_audio = True
             if wrote_audio:
+                # Platforms whose stop can clip in-flight audio pad with silence.
+                finish_stream = getattr(self._playback_adapter, "finish_stream", None)
+                if finish_stream is not None and self._is_current(gen):
+                    finish_stream(gen, stream)
                 terminal_reason = "completed"
         except Exception as exc:  # noqa: BLE001 -- worker must never crash the thread
             self._logger.warning("[Speech] playback error reason=%s", type(exc).__name__)

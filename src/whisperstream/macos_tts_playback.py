@@ -31,6 +31,18 @@ from .tts_playback_contract import (
 )
 
 SUPERTONIC_RUNTIME_UNAVAILABLE_REASON = "runtime_unavailable"
+# Each utterance owns its Core Audio stream (Windows mixes into the always-running
+# shared WASAPI engine). Stopping it while a few milliseconds of speech are still
+# in flight downstream of PortAudio is an audible click whose timing varies, so
+# every stop lands on silence: natural ends drain a silence pad, and user stops
+# ramp the next chunk to zero before that pad. Device loss and shutdown still abort.
+WRITE_CHUNK_SECONDS = 0.02
+STOP_FADE_SECONDS = 0.01
+END_SILENCE_SECONDS = 0.15
+SOFT_STOP_ABORT_SECONDS = 0.5
+_SOFT_STOP_REASONS = frozenset(
+    {SpeechTerminalReason.EXPLICIT_STOP, SpeechTerminalReason.SUPERSEDED}
+)
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -209,15 +221,62 @@ class MacOSSpeechSynthesisAdapter:
 class _OwnedOutputStream:
     """Close one native stream exactly once, exclusively from its worker."""
 
-    def __init__(self, native_stream: object) -> None:
+    def __init__(self, native_stream: object, sample_rate: int = 24_000) -> None:
         self._native_stream = native_stream
+        self._sample_rate = sample_rate
         self._lock = threading.Lock()
         self._closed = False
+        self._fade_requested = threading.Event()
+        self._faded = False
+        self._aborted = threading.Event()
+        self._released = threading.Event()
 
     def write(self, frames: np.ndarray) -> None:
-        self._native_stream.write(frames)  # type: ignore[attr-defined]
+        # Chunked so a user stop can fade the next chunk instead of aborting
+        # mid-wave. Once faded, further frames for this stream are dropped.
+        chunk = max(1, int(self._sample_rate * WRITE_CHUNK_SECONDS))
+        for start in range(0, len(frames), chunk):
+            if self._faded:
+                return
+            if self._aborted.is_set():
+                # Never send another chunk once an abort may have reached the device.
+                raise RuntimeError("speech output stream was aborted")
+            block = frames[start:start + chunk]
+            if self._fade_requested.is_set():
+                self._write_fade(block)
+                return
+            self._native_stream.write(block)  # type: ignore[attr-defined]
+
+    def _write_fade(self, block: np.ndarray) -> None:
+        self._faded = True
+        fade = min(len(block), max(1, int(self._sample_rate * STOP_FADE_SECONDS)))
+        ramp = np.linspace(1.0, 0.0, fade, dtype=np.float32).reshape(-1, 1)
+        self._native_stream.write(  # type: ignore[attr-defined]
+            (block[:fade] * ramp).astype(np.float32, copy=False)
+        )
+        self.write_silence()
+
+    def write_silence(self) -> None:
+        silence = np.zeros(
+            (int(self._sample_rate * END_SILENCE_SECONDS), 1), dtype=np.float32
+        )
+        self._native_stream.write(silence)  # type: ignore[attr-defined]
+
+    def request_fade(self) -> None:
+        self._fade_requested.set()
+
+    @property
+    def faded(self) -> bool:
+        return self._faded
+
+    def mark_released(self) -> None:
+        self._released.set()
+
+    def wait_released(self, timeout: float) -> bool:
+        return self._released.wait(timeout)
 
     def abort(self) -> None:
+        self._aborted.set()
         try:
             self._native_stream.abort()  # type: ignore[attr-defined]
         except Exception:
@@ -329,7 +388,7 @@ class MacOSSpeechPlaybackAdapter:
                 device=device,
             )
             native_stream.start()
-            return _OwnedOutputStream(native_stream)
+            return _OwnedOutputStream(native_stream, sample_rate)
         except Exception:
             if native_stream is not None:
                 try:
@@ -373,12 +432,25 @@ class MacOSSpeechPlaybackAdapter:
             if self._active.get(generation) is stream:
                 self._active.pop(generation, None)
             abort_worker = self._abort_workers.get(generation)
+        if isinstance(stream, _OwnedOutputStream):
+            # A soft-stop worker only aborts a stream its writer never released.
+            stream.mark_released()
         if abort_worker is not None and abort_worker is not threading.current_thread():
             # Waiting here is safe: stop()/interrupt() never wait, and controller
             # shutdown bounds its engine-lease wait independently. A timeout
             # cannot authorize close while native abort is still using a handle.
             abort_worker.join()
         self._close_stream(stream)
+
+    def finish_stream(self, generation: int, stream: object) -> None:
+        """Drain a silence pad after the final frames so stop lands on silence."""
+
+        if not isinstance(stream, _OwnedOutputStream) or stream.faded:
+            return
+        with self._lock:
+            if generation in self._interruptions:
+                return
+        stream.write_silence()
 
     def finish_generation(self, generation: int) -> None:
         aborted = self._wait_for_abort(generation)
@@ -461,6 +533,19 @@ class MacOSSpeechPlaybackAdapter:
                 frames = np.frombuffer(buffer.pcm_f32le, dtype="<f4")
                 stream.write(frames.reshape(-1, 1))
                 completed += 1
+            interruption = self._interruption_for(request.generation)
+            if interruption is not None:
+                reason, failure = interruption
+                return SpeechReceipt(
+                    request.completion_id,
+                    request.generation,
+                    SpeechStage.FAILED if failure else SpeechStage.INTERRUPTED,
+                    reason,
+                    failure,
+                    completed,
+                )
+            if stream is not None:
+                self.finish_stream(request.generation, stream)
             return SpeechReceipt(
                 request.completion_id,
                 request.generation,
@@ -512,8 +597,13 @@ class MacOSSpeechPlaybackAdapter:
             stream = self._active.pop(generation, None)
             if stream is None or generation in self._abort_workers:
                 return
+            soft = failure is None and reason in _SOFT_STOP_REASONS
+            if soft:
+                stream.request_fade()
             worker = threading.Thread(
-                target=self._abort_stream_worker,
+                target=(
+                    self._soft_stop_worker if soft else self._abort_stream_worker
+                ),
                 args=(generation, stream),
                 name="speech-output-abort",
                 daemon=True,
@@ -526,6 +616,17 @@ class MacOSSpeechPlaybackAdapter:
                 # The generation worker still owns normal native teardown.
                 self._active[generation] = stream
 
+    def _soft_stop_worker(
+        self,
+        generation: int,
+        stream: _OwnedOutputStream,
+    ) -> None:
+        # The writer fades and releases; abort only a writer that never does.
+        if stream.wait_released(SOFT_STOP_ABORT_SECONDS):
+            self._retire_abort_worker(generation)
+        else:
+            self._abort_stream_worker(generation, stream)
+
     def _abort_stream_worker(
         self,
         generation: int,
@@ -534,12 +635,15 @@ class MacOSSpeechPlaybackAdapter:
         try:
             self.abort_stream(stream)
         finally:
-            with self._lock:
-                if self._abort_workers.get(generation) is threading.current_thread():
-                    self._abort_workers.pop(generation, None)
-                if generation in self._finish_pending:
-                    self._finish_pending.discard(generation)
-                    self._interruptions.pop(generation, None)
+            self._retire_abort_worker(generation)
+
+    def _retire_abort_worker(self, generation: int) -> None:
+        with self._lock:
+            if self._abort_workers.get(generation) is threading.current_thread():
+                self._abort_workers.pop(generation, None)
+            if generation in self._finish_pending:
+                self._finish_pending.discard(generation)
+                self._interruptions.pop(generation, None)
 
     def interrupt(
         self,
