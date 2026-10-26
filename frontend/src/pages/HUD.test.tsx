@@ -2970,8 +2970,10 @@ describe("HUD multisession presentation", () => {
       overscrollBehavior: "contain",
       scrollBehavior: "auto",
       touchAction: "pan-y",
-      WebkitMaskImage: "linear-gradient(to bottom, transparent, black 10px)",
-      maskImage: "linear-gradient(to bottom, transparent, black 10px)",
+      // Nothing has scrolled under the top edge yet, so the first line stays
+      // unfaded.
+      WebkitMaskImage: "none",
+      maskImage: "none",
     });
     expect(
       PREVIEW_COMPACT_WELL_H / (14 * 1.46),
@@ -3421,6 +3423,7 @@ describe("HUD multisession presentation", () => {
       scrollTop: 0,
     };
     installScrollMetrics(well, metrics);
+    expect(well.style.maskImage).toBe("none");
 
     emit(
       preview(
@@ -3431,6 +3434,10 @@ describe("HUD multisession presentation", () => {
     );
     await flushPromises();
     expect(metrics.scrollTop).toBe(140);
+    // Text now sits under the top edge, so the compact well fades it.
+    expect(well).toHaveStyle({
+      maskImage: "linear-gradient(to bottom, transparent, black 10px)",
+    });
 
     metrics.scrollTop = 80;
     fireEvent.scroll(well);

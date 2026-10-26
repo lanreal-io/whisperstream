@@ -4,7 +4,7 @@ import {
   normalizePreviewText,
 } from "../dictationState";
 import { useReducedMotion, motion } from "framer-motion";
-import { useRef, useCallback, useLayoutEffect } from "react";
+import { useRef, useCallback, useLayoutEffect, useState } from "react";
 import {
   PREVIEW_CARD_NON_TEXT_H,
   PREVIEW_COMPACT_WELL_H,
@@ -65,6 +65,9 @@ export function PreviewCard({
   const scrollerRef = useRef<HTMLDivElement>(null);
   const followLatestRef = useRef(true);
   const preservedScrollTopRef = useRef(0);
+  // The compact well fades its top edge only once text has scrolled under it;
+  // an always-on fade dims the first line before anything has scrolled.
+  const [scrolledUnder, setScrolledUnder] = useState(false);
   const wellHeight = expanded
     ? Math.max(0, cardHeight - PREVIEW_CARD_NON_TEXT_H)
     : PREVIEW_COMPACT_WELL_H;
@@ -116,6 +119,7 @@ export function PreviewCard({
     followLatestRef.current =
       maxScrollTop - scroller.scrollTop <= PREVIEW_BOTTOM_THRESHOLD;
     preservedScrollTopRef.current = scroller.scrollTop;
+    setScrolledUnder(scroller.scrollTop > 0);
   }, []);
 
   useLayoutEffect(() => {
@@ -127,10 +131,17 @@ export function PreviewCard({
         scroller.scrollHeight - scroller.clientHeight,
       );
       preservedScrollTopRef.current = scroller.scrollTop;
+      setScrolledUnder(scroller.scrollTop > 0);
       return;
     }
     scroller.scrollTop = preservedScrollTopRef.current;
+    setScrolledUnder(scroller.scrollTop > 0);
   }, [visibleText]);
+
+  const topFade =
+    !expanded && scrolledUnder
+      ? "linear-gradient(to bottom, transparent, black 10px)"
+      : "none";
 
   const controlLabel = expanded ? "Collapse preview" : "Expand preview";
 
@@ -223,13 +234,8 @@ export function PreviewCard({
           overscrollBehavior: "contain",
           scrollBehavior: "auto",
           touchAction: "pan-y",
-          WebkitMaskImage:
-            expanded
-              ? "none"
-              : "linear-gradient(to bottom, transparent, black 10px)",
-          maskImage: expanded
-            ? "none"
-            : "linear-gradient(to bottom, transparent, black 10px)",
+          WebkitMaskImage: topFade,
+          maskImage: topFade,
         }}
       >
         <p
