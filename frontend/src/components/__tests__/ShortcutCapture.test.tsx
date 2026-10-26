@@ -76,13 +76,13 @@ describe("ShortcutCapture — entry-only clear action", () => {
   it("shows no clear action while a bound shortcut is resting", () => {
     render(<ShortcutCapture {...makeProps({ value: "ctrl+alt+1" })} />);
     expect(screen.queryByRole("button", { name: "Clear shortcut" })).toBeNull();
-    expect(screen.getByText("ctrl+alt+1")).toBeInTheDocument();
+    expect(screen.getByText("Ctrl+Alt+1")).toBeInTheDocument();
   });
 
   it("reveals clear and the below-field Escape cue while editing a bound shortcut", () => {
     render(<ShortcutCapture {...makeProps({ value: "ctrl+alt+1" })} />);
 
-    fireEvent.click(screen.getByText("ctrl+alt+1"));
+    fireEvent.click(screen.getByText("Ctrl+Alt+1"));
 
     expect(screen.getByText("Press shortcut")).toBeInTheDocument();
     expect(screen.getByText("Esc to cancel")).toBeInTheDocument();
@@ -98,7 +98,7 @@ describe("ShortcutCapture — entry-only clear action", () => {
         })}
       />,
     );
-    fireEvent.click(screen.getByText("ctrl+alt+1"));
+    fireEvent.click(screen.getByText("Ctrl+Alt+1"));
     expect(
       screen.getByRole("button", { name: "Clear Push to Talk shortcut" }),
     ).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe("ShortcutCapture — entry-only clear action", () => {
     render(
       <ShortcutCapture {...makeProps({ value: "ctrl+alt+1", send, onChange })} />,
     );
-    fireEvent.click(screen.getByText("ctrl+alt+1"));
+    fireEvent.click(screen.getByText("Ctrl+Alt+1"));
     fireEvent.click(screen.getByRole("button", { name: "Clear shortcut" }));
 
     expect(send).toHaveBeenLastCalledWith({ type: "shortcut.capture.stop" });
@@ -133,7 +133,7 @@ describe("ShortcutCapture — entry-only clear action", () => {
         {...makeProps({ value: "ctrl+alt+1", clearable: false })}
       />,
     );
-    fireEvent.click(screen.getByText("ctrl+alt+1"));
+    fireEvent.click(screen.getByText("Ctrl+Alt+1"));
     expect(screen.queryByRole("button", { name: "Clear shortcut" })).toBeNull();
     expect(screen.getByText("Esc to cancel")).toBeInTheDocument();
   });
@@ -157,7 +157,7 @@ describe("ShortcutCapture — capture lifecycle", () => {
     );
 
     // Resting chips are decorative; the button's name carries the shortcut.
-    const field = screen.getByRole("button", { name: "⇧" });
+    const field = screen.getByRole("button", { name: "Right ⇧" });
     expect(field).toBeInTheDocument();
     fireEvent.click(field);
     act(() => {
@@ -189,12 +189,12 @@ describe("ShortcutCapture — capture lifecycle", () => {
       <ShortcutCapture {...makeProps({ value: "ctrl+alt+1", send, onChange })} />,
     );
 
-    fireEvent.click(screen.getByText("ctrl+alt+1"));
+    fireEvent.click(screen.getByText("Ctrl+Alt+1"));
     fireEvent.click(screen.getByText("Press shortcut"));
 
     expect(send).toHaveBeenLastCalledWith({ type: "shortcut.capture.stop" });
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByText("ctrl+alt+1")).toBeInTheDocument();
+    expect(screen.getByText("Ctrl+Alt+1")).toBeInTheDocument();
   });
 
   it("committing a new combination replaces the old value", () => {
@@ -211,7 +211,7 @@ describe("ShortcutCapture — capture lifecycle", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("ctrl+alt+1"));
+    fireEvent.click(screen.getByText("Ctrl+Alt+1"));
     act(() => {
       events.emit({ type: "shortcut.captured", keys: "ctrl+shift+2", target: "toggle" });
     });
@@ -241,7 +241,7 @@ describe("ShortcutCapture — Esc-to-cancel", () => {
       />,
     );
 
-    fireEvent.click(screen.getByText("ctrl+alt+1"));
+    fireEvent.click(screen.getByText("Ctrl+Alt+1"));
     expect(send).toHaveBeenCalledWith({
       type: "shortcut.capture.start",
       target: "primary",
@@ -254,6 +254,6 @@ describe("ShortcutCapture — Esc-to-cancel", () => {
 
     expect(send).toHaveBeenCalledWith({ type: "shortcut.capture.stop" });
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByText("ctrl+alt+1")).toBeInTheDocument();
+    expect(screen.getByText("Ctrl+Alt+1")).toBeInTheDocument();
   });
 });

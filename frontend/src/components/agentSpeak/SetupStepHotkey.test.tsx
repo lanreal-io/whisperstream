@@ -48,7 +48,7 @@ function gestureSentence(): HTMLElement | null {
 
 /** The capture's own button, identified the way the user sees it: its value. */
 function captureButton(): HTMLElement {
-  return screen.getByText("ctrl+alt+`");
+  return screen.getByText("Ctrl+Alt+`");
 }
 
 afterEach(() => {

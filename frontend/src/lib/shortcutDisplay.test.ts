@@ -15,7 +15,9 @@ describe("shortcutPlatform", () => {
 
 describe("Mac shortcut notation", () => {
   it.each([
-    ["right shift", "⇧"],
+    ["shift", "⇧"],
+    ["right shift", "Right ⇧"],
+    ["ctrl+left option+k", "⌃ Left ⌥ K"],
     ["cmd+option+shift+k", "⌥⇧⌘K"],
     ["ctrl+cmd+space", "⌃⌘Space"],
     ["win+alt+left", "⌥⌘←"],
@@ -34,8 +36,8 @@ describe("Mac shortcut notation", () => {
 });
 
 describe("Windows shortcut notation", () => {
-  it("preserves the configured names and separators", () => {
-    expect(formatShortcut("right shift", "windows")).toBe("right shift");
-    expect(formatShortcut("ctrl+alt+k", "windows")).toBe("ctrl+alt+k");
+  it("title-cases the configured names and keeps the separators", () => {
+    expect(formatShortcut("right shift", "windows")).toBe("Right Shift");
+    expect(formatShortcut("ctrl+alt+k", "windows")).toBe("Ctrl+Alt+K");
   });
 });

@@ -81,7 +81,7 @@ export function shortcutDisplayParts(
     .split("+")
     .map((part) => part.trim())
     .filter(Boolean);
-  if (platform !== "macos") return parts;
+  if (platform !== "macos") return parts.map(titleCaseWords);
 
   return parts
     .map(normalizeMacPart)
@@ -94,6 +94,10 @@ export function shortcutDisplayParts(
         : leftOrder - rightOrder;
     })
     .map((part) => {
+      // A sided modifier only fires on that side, so the glyph alone would
+      // read as either key: "right shift" shows as "Right ⇧".
+      const side = /^(left|right) /.exec(part)?.[1];
+      if (side && MAC_GLYPHS[part]) return `${titleCaseWords(side)} ${MAC_GLYPHS[part]}`;
       if (MAC_GLYPHS[part]) return MAC_GLYPHS[part];
       if (part.length === 1) return part.toUpperCase();
       if (part === "space") return "Space";
@@ -102,10 +106,16 @@ export function shortcutDisplayParts(
     });
 }
 
+function titleCaseWords(part: string): string {
+  return part.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 export function formatShortcut(
   shortcut: string,
   platform: ShortcutPlatform = shortcutPlatform(),
 ): string {
   const parts = shortcutDisplayParts(shortcut, platform);
-  return platform === "macos" ? parts.join("") : parts.join("+");
+  if (platform !== "macos") return parts.join("+");
+  // Glyphs run together ("⌥⇧⌘K"); a worded side needs spaces to stay legible.
+  return parts.some((part) => part.includes(" ")) ? parts.join(" ") : parts.join("");
 }
