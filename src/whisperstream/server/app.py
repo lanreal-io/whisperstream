@@ -658,6 +658,10 @@ class WhisperstreamServer:
         # (Task 2.2). Lazily constructed so a build/run that never registers a
         # managed session never loads this experimental state.
         self._managed_sessions: Optional[Any] = None
+        # Mod-route bookkeeping that outlives a reaped routing record: turns the
+        # Stop hook already delivered, and per-session mod poll timing.
+        self._claude_hook_delivered: Optional[Any] = None
+        self._claude_mod_poll_gaps: Optional[Any] = None
 
         # Memory-only HUD interaction state and scoped compose leases. These
         # remain lazy so production builds can exclude experimental modules.
@@ -2094,6 +2098,18 @@ class WhisperstreamServer:
                     )
                 before = visible_state(body.get("handle"))
                 session, response, event = accept_claude_packet(store, body)
+                if session is not None:
+                    from ..agent_transports import MOD_POLL_GAP_LOG_SECONDS  # noqa: PLC0415
+
+                    gap = self._get_claude_mod_poll_gaps().observe(body.get("session_id"))
+                    if gap is not None and gap >= MOD_POLL_GAP_LOG_SECONDS:
+                        # Seconds and validated enums only; never the session ID.
+                        self._logger.info(
+                            "[ClaudeMod] poll gap seconds=%d reconnect=%s state=%s",
+                            int(gap),
+                            "true" if body.get("action") == "connect" else "false",
+                            body.get("state"),
+                        )
                 if session is not None and body.get("action") == "connect":
                     self._record_claude_connection(body.get("plugin_version"))
                 if event is not None and session is not None:
@@ -8459,6 +8475,25 @@ class WhisperstreamServer:
             )
         return self._managed_sessions
 
+    def _get_claude_hook_delivered(self):
+        if self._claude_hook_delivered is None:
+            from ..agent_transports import HookDeliveredTurns  # noqa: PLC0415
+
+            self._claude_hook_delivered = HookDeliveredTurns()
+        return self._claude_hook_delivered
+
+    def _get_claude_mod_poll_gaps(self):
+        if self._claude_mod_poll_gaps is None:
+            from ..agent_transports import ModPollGaps  # noqa: PLC0415
+
+            self._claude_mod_poll_gaps = ModPollGaps()
+        return self._claude_mod_poll_gaps
+
+    def _clear_claude_mod_route_state(self) -> None:
+        for owner in (self._claude_hook_delivered, self._claude_mod_poll_gaps):
+            if owner is not None:
+                owner.clear()
+
     def _arm_managed_session_expiry(self) -> None:
         """Keep one deadline only while managed sessions exist.
 
@@ -8499,6 +8534,8 @@ class WhisperstreamServer:
 
     def _remove_managed_sessions_for_agent(self, agent: str) -> None:
         """Scrub one disabled provider without disturbing the other."""
+        if agent == "claude":
+            self._clear_claude_mod_route_state()
         store = self._managed_sessions
         if store is None:
             # Hook-only drafts exist without any wrapped session.
@@ -9147,6 +9184,7 @@ class WhisperstreamServer:
             self._codex_activation_registry.clear()
         if self._managed_sessions is not None:
             self._managed_sessions.clear()
+        self._clear_claude_mod_route_state()
         try:
             from ..claude_hud import clear_claude_session_state  # noqa: PLC0415
 
@@ -9185,6 +9223,8 @@ class WhisperstreamServer:
         self._claude_activation_registry = None
         self._codex_activation_registry = None
         self._managed_sessions = None
+        self._claude_hook_delivered = None
+        self._claude_mod_poll_gaps = None
         if self._reply_desk is not None:
             self._reply_desk.clear()
         self._reply_desk = None
@@ -10043,6 +10083,13 @@ class WhisperstreamServer:
                                 return {}  # turn.complete owns this connected session
                             correlation_token = peer.token
                             break
+                    else:
+                        gaps = self._claude_mod_poll_gaps
+                        if event_name == "Stop" and gaps is not None and gaps.seen(event_sid):
+                            # The session has a mod, but its poll is stale (for
+                            # example a paused background session), so the hook
+                            # delivers this turn. The mod's later re-send is dropped.
+                            self._logger.debug("[ClaudeHUD] Stop route=hook reason=mod_stale")
 
             bound_session = None
             if correlation_token:
@@ -10082,6 +10129,10 @@ class WhisperstreamServer:
                 self._get_agent_speech_focus().note_prompt(
                     "claude", raw_session_id
                 )
+                # A new prompt empties the mod's queue, so it can no longer
+                # re-send a turn the hook delivered before this prompt.
+                if self._claude_hook_delivered is not None:
+                    self._claude_hook_delivered.forget_session(raw_session_id)
                 self._publish_claude_working(raw_session_id)
                 context = result.get("additional_context")
                 if isinstance(context, str) and context:
@@ -10120,6 +10171,22 @@ class WhisperstreamServer:
                 return {}
 
             if kind == "response":
+                # The same turn reaches us once per route. A Stop hook that ran
+                # while the mod looked stale already delivered it, so drop the
+                # mod's copy when its paused timer resumes and sends it.
+                turn_key = result.get("spoken_summary") or result.get("text")
+                if persistent_transport:
+                    if self._claude_hook_delivered is not None and self._claude_hook_delivered.consume(
+                        raw_session_id, turn_key
+                    ):
+                        self._logger.debug(
+                            "[ClaudeMod] completion dropped reason=hook_delivered"
+                        )
+                        return {}
+                elif self._claude_mod_poll_gaps is not None and self._claude_mod_poll_gaps.seen(
+                    raw_session_id
+                ):
+                    self._get_claude_hook_delivered().record(raw_session_id, turn_key)
                 if (
                     bound_session is not None
                     and correlation_token
