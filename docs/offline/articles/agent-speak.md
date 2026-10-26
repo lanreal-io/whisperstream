@@ -51,7 +51,7 @@ Choose a **Voice model**:
 | **Higher quality** | Uses Kokoro, which uses up to 1.5 GB of memory while speaking. |
 | **Lower memory** | Uses Supertonic, which starts faster and uses up to 400 MB of memory while speaking. |
 
-Lower memory is the Windows default. On Mac, Kokoro is the only voice model, and Automatic is the default. Choosing Automatic or Higher quality downloads Kokoro from Hugging Face; it has no automatic backup source. Each voice model keeps its own voice choice.
+Lower memory is the default on Windows, and Automatic is the default on Mac. Choosing Automatic or Higher quality downloads Kokoro from Hugging Face; it has no automatic backup source. Each voice model keeps its own voice choice.
 
 Change **Voice model**, **Voice**, **Speed**, and **Volume** here. Voice previews are available in the picker. For the playback destination, see [Audio](/docs/dictation/audio).
 

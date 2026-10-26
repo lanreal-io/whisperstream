@@ -88,7 +88,7 @@
     }
   ],
   "inputs": {
-    "docs/offline/articles/agent-speak.md": "sha256:a26f0d17fdaad357afbb8a653c8ed020a2aaa8d442ab0dbff95793b362c266b7",
+    "docs/offline/articles/agent-speak.md": "sha256:0d67a8d98ff7539069e6257e2c1ad8bc5d55ccabcde1bb6f2fd445b6f9879140",
     "docs/offline/articles/app-basics.md": "sha256:8c10de6fc2d270e2d14c085c6a5fdc98e5a9e08c3c08cee4c726ed5b3ebaad9d",
     "docs/offline/articles/audio.md": "sha256:9ed571f118252a37d6e147870c0b675c5a418dabbb661b1f1ac777100381a455",
     "docs/offline/articles/coding-agent-sessions.md": "sha256:f54360c1567350e2918b71f9a37502aaf10d05649763095e504a990d2134dbe3",
@@ -129,11 +129,11 @@
     "markdown/transcript-history.md": "sha256:1f82fdc8a6c95254251f53bcb1640625a48e69989456d59396a907aa962551b1",
     "markdown/lockdown-mode.md": "sha256:a93bb911721b46c58a8c9c7189dbbe53b2c0722c5968580c529fe96cfe37d30b",
     "markdown/managed-lockdown-deployment.md": "sha256:f6847c5044c0ddbbb0cb695cbb49ad372fa0c289a145e9c2df5d18eb1a6953e3",
-    "markdown/agent-speak.md": "sha256:5f371a047771e70e9ee6b74461c7a86a73f3fc62b8bc3545a2b0e822355a19f6",
+    "markdown/agent-speak.md": "sha256:1b0939043c6eb07591316d4e2aa4545da4d58d3e7434b138b8b035f6b84227de",
     "markdown/coding-agent-sessions.md": "sha256:290be6f11653050a7e0e934f3e77bcbd957133064f8ae3ae2ccc671bf53ac92a",
     "markdown/settings-data-locations.md": "sha256:9eb19db5c9435fbff523282e54c58fd06fb21c8ec07b6b302a417e9980ead1ae",
     "markdown/model-recovery.md": "sha256:a11e0b4eda947a1f22b176a5e3db5ce2786a41d3689823b0b74b1bc737022113",
     "markdown/README.md": "sha256:b9c9f2831ff6143b874f11ec8639e0a9b53b530020f7c9847b1ff407a0fd7e1d",
-    "Whisperstream-Documentation.pdf": "sha256:3e0ce02956af751649dd4195571e970b0f9071af0d00de5c87ff6390e3de7b07"
+    "Whisperstream-Documentation.pdf": "sha256:7795d3a4e426d358cbe690c0c0aeda71ac777a855985efeb05df1b515a9f5557"
   }
 }

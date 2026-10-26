@@ -30,7 +30,6 @@ from .tts_playback_contract import (
     SpeechTerminalReason,
 )
 
-SUPERTONIC_RUNTIME_UNAVAILABLE_REASON = "runtime_unavailable"
 # Each utterance owns its Core Audio stream (Windows mixes into the always-running
 # shared WASAPI engine). Stopping it while a few milliseconds of speech are still
 # in flight downstream of PortAudio is an audible click whose timing varies, so
@@ -67,21 +66,6 @@ class MacOSSpeechSynthesisAdapter:
         self._logger = logger or logging.getLogger(__name__)
         self._selection = SelectionPolicy(engine_manager)  # type: ignore[arg-type]
         self._closed = False
-        # Model files and an executable reviewed runtime are separate facts.
-        # The Mac milestone explicitly retains Kokoro-only TTS. The shared
-        # sherpa dependency is now present for STT; that does not expand the
-        # approved speech scope or establish native Supertonic playback proof.
-        runtime_gate = getattr(self._manager, "mark_runtime_unavailable", None)
-        if callable(runtime_gate):
-            runtime_gate(
-                SUPERTONIC_SPEC.key,
-                SUPERTONIC_RUNTIME_UNAVAILABLE_REASON,
-            )
-        else:
-            self._manager.mark_unhealthy(  # type: ignore[attr-defined]
-                SUPERTONIC_SPEC.key,
-                SUPERTONIC_RUNTIME_UNAVAILABLE_REASON,
-            )
 
     @property
     def engine_manager(self) -> object:
@@ -161,7 +145,7 @@ class MacOSSpeechSynthesisAdapter:
             if key == SUPERTONIC_SPEC.key and not self._manager.is_available(  # type: ignore[attr-defined]
                 key
             ):
-                raise RuntimeError("reviewed native Supertonic runtime is unavailable")
+                raise RuntimeError("Supertonic speech engine is unavailable")
             return key, self._voice(key, request.voice_token)
         try:
             supertonic_voice: object = int(request.voice_token)

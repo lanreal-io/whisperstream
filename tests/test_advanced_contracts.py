@@ -182,14 +182,11 @@ def test_advanced_inventory_is_complete_native_free_and_truthful() -> None:
         }
     )
     assert mac["tts-synthesis-playback"].state is (
-        AdvancedCapabilityState.EXTERNAL_DEPENDENCY
+        AdvancedCapabilityState.AVAILABLE
     )
-    assert (
-        mac["tts-synthesis-playback"].reason_code
-        == "supertonic-native-runtime-prerequisite"
-    )
+    assert mac["tts-synthesis-playback"].reason_code == "darwin-playback"
     assert mac["tts-synthesis-playback"].presentation is (
-        AdvancedCapabilityPresentation.EXPLAIN
+        AdvancedCapabilityPresentation.ENABLE
     )
     assert mac["agent-hook-lifecycle"].state is AdvancedCapabilityState.AVAILABLE
     assert mac["agent-hud-integration"].state is AdvancedCapabilityState.AVAILABLE
