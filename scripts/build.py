@@ -741,7 +741,9 @@ def _generate_latest_json(version: str, total: int) -> None:
     changelog = b.REPO_ROOT / "CHANGELOG.md"
     notes = None
     if changelog.exists():
-        notes = b.extract_changelog_notes(version, changelog.read_text(encoding="utf-8"))
+        notes = b.extract_changelog_notes(
+            version, changelog.read_text(encoding="utf-8"), platform="windows"
+        )
         if notes is not None:
             print(f"Using CHANGELOG.md notes for {version} ({len(notes)} chars)")
         else:

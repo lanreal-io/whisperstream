@@ -1,6 +1,6 @@
 [package]
 name = "whisperstream"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2021"
 default-run = "whisperstream"
 license = "GPL-3.0-only"

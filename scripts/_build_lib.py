@@ -905,7 +905,57 @@ iso_utc_now = _iso_utc_now
 # latest.json generation + CHANGELOG note extraction (Task 1.2)
 # ---------------------------------------------------------------------------
 
-def extract_changelog_notes(version: str, changelog_text: str) -> str | None:
+CHANGELOG_PLATFORMS = ("windows", "mac")
+
+# A bullet that applies to one platform only: ``- [Mac] Fixed ...``.
+_PLATFORM_BULLET = re.compile(r"^(\s*[-*]\s+)\[(mac|windows)\]\s*", re.IGNORECASE)
+
+
+def filter_changelog_platform(notes: str, platform: str) -> str | None:
+    """Keep the notes that apply to *platform*.
+
+    Shared bullets stay as they are. A ``[Mac]`` or ``[Windows]`` bullet is
+    kept, without its tag, on the matching platform and dropped (with any
+    indented continuation lines) on the other. A ``###`` heading left with no
+    content is dropped too, so the update popup never shows an empty group.
+    """
+    platform = platform.lower()
+    if platform not in CHANGELOG_PLATFORMS:
+        raise ValueError(f"unknown changelog platform: {platform!r}")
+
+    kept: list[str] = []
+    dropping = False
+    for line in notes.splitlines():
+        match = _PLATFORM_BULLET.match(line)
+        if match:
+            dropping = match.group(2).lower() != platform
+            if not dropping:
+                kept.append(match.group(1) + line[match.end():])
+            continue
+        if dropping and line.strip() and line[:1].isspace():
+            continue  # continuation of a dropped bullet
+        dropping = False
+        kept.append(line)
+
+    # Drop headings whose group is now empty, then collapse blank runs.
+    blocks: list[list[str]] = [[]]
+    for line in kept:
+        if line.startswith("#"):
+            blocks.append([])
+        blocks[-1].append(line)
+    lines = [
+        line
+        for block in blocks
+        if not (block and block[0].startswith("#") and not any(l.strip() for l in block[1:]))
+        for line in block
+    ]
+    text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+    return text or None
+
+
+def extract_changelog_notes(
+    version: str, changelog_text: str, platform: str | None = None
+) -> str | None:
     """Extract the release notes body for *version* from a CHANGELOG.md string.
 
     Matches the ``## [X.Y.Z]`` section heading (plus optional date suffix) and
@@ -915,6 +965,8 @@ def extract_changelog_notes(version: str, changelog_text: str) -> str | None:
     Args:
         version: The version string to look up, e.g. ``"1.0.1"``.
         changelog_text: The full text of ``CHANGELOG.md``.
+        platform: ``"windows"`` or ``"mac"`` to keep only the notes for that
+            platform's update feed (see ``filter_changelog_platform``).
 
     Returns:
         The stripped bullet body for *version*, or ``None`` if the section is
@@ -929,9 +981,10 @@ def extract_changelog_notes(version: str, changelog_text: str) -> str | None:
         r"(?=^## \[|\Z)"                           # stop at next section or EOF
     )
     match = re.search(pattern, changelog_text, flags=re.MULTILINE | re.DOTALL)
-    if match and match.group(1).strip():
-        return match.group(1).strip()
-    return None
+    if not (match and match.group(1).strip()):
+        return None
+    notes = match.group(1).strip()
+    return filter_changelog_platform(notes, platform) if platform else notes
 
 
 def update_download_base(
