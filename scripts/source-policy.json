@@ -375,15 +375,15 @@
     },
     {
       "path": "docs/images/home-light.png",
-      "sha256": "3c66e101fe9776474a825db44e75c2c086d4e7494b2f63522c82d13ef2e16a75",
+      "sha256": "56d0917d9788fe2e72ab6f5fb112e0fa127574b774b9b1856933164aedae0672",
       "reason": "README screenshot of the Whisperstream Home tab, captured from source with synthetic usage stats; no personal data",
-      "approval": "Owner-requested README header screenshot, 2026-10-22"
+      "approval": "Owner-approved README header screenshot refresh (current dropdown, no dark glow), 2026-10-26"
     },
     {
       "path": "docs/images/home-dark.png",
-      "sha256": "bb448dbab7415ab6ce60b13f9dfb3ff2d4b5c5f42c9580370853564659b94080",
+      "sha256": "494c46b75d1cd8f9d57fb70b50fcae648ca5533ade2fde028e75cd607b213bb1",
       "reason": "README screenshot of the Whisperstream Home tab, captured from source with synthetic usage stats; no personal data",
-      "approval": "Owner-requested README header screenshot, 2026-10-22"
+      "approval": "Owner-approved README header screenshot refresh (current dropdown, no dark glow), 2026-10-26"
     },
     {
       "path": "tests/fixtures/synthetic/speech.wav",
