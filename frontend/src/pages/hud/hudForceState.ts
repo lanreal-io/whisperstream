@@ -1084,6 +1084,16 @@ export const HUD_FORCED_STATES: HudForcedState[] = [
     ],
   },
   {
+    id: "live_preview_first_line",
+    group: "Dictation",
+    label: "Live Preview, first line",
+    note: "Text that has not scrolled yet: the top line sits unfaded.",
+    dictationEvents: [
+      dictationLifecycle("recording", 41, true),
+      dictationPreview("Okay so the export bug is fixed."),
+    ],
+  },
+  {
     id: "live_preview_expanded",
     group: "Dictation",
     label: "Live Preview, expanded",
