@@ -376,7 +376,8 @@ def test_interrupt_after_first_buffer_prevents_a_second_uncertain_write() -> Non
         1,
     )
     assert native.write_calls == 1
-    assert (native.aborted, native.stopped, native.closed) == (1, 1, 1)
+    # A user stop the writer honors ends with a draining stop, not an abort.
+    assert (native.aborted, native.stopped, native.closed) == (0, 1, 1)
     assert not adapter._active  # noqa: SLF001
     assert not adapter._interruptions  # noqa: SLF001
     assert not adapter._abort_workers  # noqa: SLF001
@@ -542,3 +543,77 @@ def test_phase4_audio_policy_coordination_stops_speech_before_policy_or_license(
         app._start_recording()
     assert order == ["speech-stop", "capture"]
     app.audio_policy.begin.assert_not_called()
+
+
+def _speech_buffer(generation: int, frames: np.ndarray) -> SpeechBuffer:
+    return SpeechBuffer(generation, 0, 24_000, 1, frames.astype("<f4").tobytes(), True)
+
+
+def test_completed_speech_drains_silence_before_stop() -> None:
+    from whisperstream import macos_tts_playback as module
+
+    native = FakeNativeStream()
+    adapter = MacOSSpeechPlaybackAdapter(
+        sounddevice_module=FakeSoundDevice([native]),
+        current_output_resolver=lambda: 5,
+    )
+    loud = np.full(2_400, 0.5, dtype="<f4")
+
+    receipt = adapter.play(_request(30), [_speech_buffer(30, loud)])
+
+    assert receipt.stage is SpeechStage.COMPLETED
+    np.testing.assert_array_equal(np.concatenate(native.writes[:-1]).reshape(-1), loud)
+    pad = native.writes[-1].reshape(-1)
+    assert pad.size == int(24_000 * module.END_SILENCE_SECONDS)
+    assert not pad.any()
+    assert (native.aborted, native.stopped, native.closed) == (0, 1, 1)
+
+
+def test_user_stop_fades_the_next_chunk_then_drains_silence() -> None:
+    from whisperstream import macos_tts_playback as module
+
+    native = FakeNativeStream()
+    adapter = MacOSSpeechPlaybackAdapter(
+        sounddevice_module=FakeSoundDevice([native]),
+        current_output_resolver=lambda: 5,
+    )
+    native.on_write = lambda count: (
+        adapter.interrupt(31, SpeechTerminalReason.EXPLICIT_STOP) if count == 2 else None
+    )
+    loud = np.full(24_000, 0.5, dtype="<f4")
+
+    receipt = adapter.play(_request(31), [_speech_buffer(31, loud)])
+
+    assert receipt.stage is SpeechStage.INTERRUPTED
+    chunk = int(24_000 * module.WRITE_CHUNK_SECONDS)
+    fade = int(24_000 * module.STOP_FADE_SECONDS)
+    assert [w.shape[0] for w in native.writes] == [
+        chunk,
+        chunk,
+        fade,
+        int(24_000 * module.END_SILENCE_SECONDS),
+    ]
+    ramp = native.writes[2].reshape(-1)
+    assert ramp[0] == np.float32(0.5) and ramp[-1] == 0.0
+    assert np.all(np.diff(ramp) <= 0)
+    assert not native.writes[3].any()
+    assert (native.aborted, native.stopped, native.closed) == (0, 1, 1)
+    assert not adapter._abort_workers  # noqa: SLF001
+
+
+def test_device_change_still_aborts_without_fading() -> None:
+    native = FakeNativeStream()
+    adapter = MacOSSpeechPlaybackAdapter(
+        sounddevice_module=FakeSoundDevice([native]),
+        current_output_resolver=lambda: 5,
+    )
+    native.on_write = lambda count: (
+        adapter.output_device_changed(32) if count == 1 else None
+    )
+    loud = np.full(24_000, 0.5, dtype="<f4")
+
+    receipt = adapter.play(_request(32), [_speech_buffer(32, loud)])
+
+    assert receipt.failure is SpeechFailure.OUTPUT_CHANGED
+    assert native.aborted == 1
+    assert all(np.all(w == np.float32(0.5)) for w in native.writes)

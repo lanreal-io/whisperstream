@@ -1833,3 +1833,45 @@ def test_repeated_stops_only_track_real_worker_generations(replace_after_stops: 
     assert owner._busy_workers == 0
     assert owner._cancel_reasons == {}
     assert owner._worker_generations == set()
+
+
+class _FinishStreamSpy:
+    def __init__(self, inner: object) -> None:
+        self._inner = inner
+        self.finished: list[int] = []
+
+    def finish_stream(self, generation: int, _stream: object) -> None:
+        self.finished.append(generation)
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._inner, name)
+
+
+def test_completed_speech_asks_the_adapter_to_finish_the_stream_once() -> None:
+    owner = _make_owner(FakeEngine(), Recorder())
+    spy = _FinishStreamSpy(owner._playback_adapter)  # noqa: SLF001
+    owner._playback_adapter = spy  # noqa: SLF001
+    reasons, called, callback = _terminal_recorder()
+
+    owner.speak("First. Second.", on_terminal=callback)
+
+    assert called.wait(timeout=3.0)
+    assert reasons == ["completed"]
+    assert spy.finished == [1]
+
+
+def test_stopped_speech_does_not_finish_the_stream() -> None:
+    engine = FakeEngine(gate_on=2)
+    owner = _make_owner(engine, Recorder())
+    spy = _FinishStreamSpy(owner._playback_adapter)  # noqa: SLF001
+    owner._playback_adapter = spy  # noqa: SLF001
+    reasons, called, callback = _terminal_recorder()
+
+    owner.speak("First. Second.", on_terminal=callback)
+    assert engine.entered.wait(timeout=3.0)
+    owner.stop()
+    engine.release.set()
+
+    assert called.wait(timeout=3.0)
+    assert reasons == ["stopped"]
+    assert spy.finished == []
