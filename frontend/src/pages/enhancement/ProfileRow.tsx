@@ -103,7 +103,7 @@ export function ProfileRow({
                 <HoverTooltip
                   key={`app:${target.processName}`}
                   content={target.label}
-                  side="bottom-left"
+                  side="bottom-right"
                   width="w-auto"
                 >
                   <AppIcon
@@ -118,7 +118,7 @@ export function ProfileRow({
                 <HoverTooltip
                   key={`site:${target.domain}`}
                   content={target.domain}
-                  side="bottom-left"
+                  side="bottom-right"
                   width="w-auto"
                 >
                   <SiteGlyph icon={target.icon} />

@@ -9,9 +9,10 @@ use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, AnyObject, Bool, ClassBuilder, NSObject};
 use objc2::{define_class, ffi, msg_send, AnyThread, ClassType, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
-    NSApplicationActivationOptions, NSPanel, NSRunningApplication, NSTrackingArea,
+    NSApplicationActivationOptions, NSPanel, NSRunningApplication, NSToolbar, NSTrackingArea,
     NSTrackingAreaOptions, NSView, NSWindow, NSWindowButton, NSWindowCollectionBehavior,
-    NSWindowStyleMask, NSWindowTitleVisibility, NSWorkspace, NSWorkspaceDidWakeNotification, NSWorkspaceScreensDidWakeNotification,
+    NSWindowStyleMask, NSWindowTitleVisibility, NSWindowToolbarStyle, NSWorkspace,
+    NSWorkspaceDidWakeNotification, NSWorkspaceScreensDidWakeNotification,
 };
 use objc2_foundation::{NSActivityOptions, NSProcessInfo, NSString};
 use objc2_service_management::{SMAppService, SMAppServiceStatus};
@@ -790,15 +791,14 @@ fn install_overlay_spaces_policy(app: &tauri::AppHandle) -> Result<(), Box<dyn s
 /// lights, rounded corners and the system shadow. The title bar is a
 /// transparent overlay over full-size content, so the web layout is unchanged
 /// and its own drag regions still move the window. Windows keeps its custom
-/// controls; `trafficLightPosition` in tauri.conf.json places these buttons.
+/// controls.
 fn install_main_window_chrome(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let window = app
         .get_webview_window(window_label(WindowRole::Main))
         .ok_or("missing main window")?;
     let pointer = window.ns_window()?;
     // setup runs on AppKit's main thread, before the main window is first
-    // shown; Tauri's view positions the buttons on draw, so they must exist
-    // before then.
+    // shown.
     let native = unsafe { &*(pointer as *const NSWindow) };
     native.setStyleMask(
         native.styleMask()
@@ -809,6 +809,12 @@ fn install_main_window_chrome(app: &tauri::AppHandle) -> Result<(), Box<dyn std:
     );
     native.setTitlebarAppearsTransparent(true);
     native.setTitleVisibility(NSWindowTitleVisibility::Hidden);
+    // An empty unified toolbar gives the title bar its standard height, so
+    // AppKit lays the traffic lights out where it tracks their hover. Moving
+    // them by hand leaves the hover area at their original position.
+    let toolbar = NSToolbar::new(MainThreadMarker::new().ok_or("not on the main thread")?);
+    native.setToolbar(Some(&toolbar));
+    native.setToolbarStyle(NSWindowToolbarStyle::Unified);
     // The window is fixed-size, so zoom would only show as a blank disabled
     // button.
     if let Some(zoom) = native.standardWindowButton(NSWindowButton::ZoomButton) {
