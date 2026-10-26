@@ -329,12 +329,14 @@ obligations. When Lockdown Mode is on:
   cleanup is forced to the on-device model, so Whisperstream does not
   send that transcript to a configured cleanup provider.
 - **Your transcript history is locked behind a password.** A key
-  derived from a password you choose additionally wraps the transcript
-  encryption key, on top of the AES-256-GCM encryption at rest and the
-  operating-system key protection already described in Section 3.4
-  (see Section 12 for the details). A one-time recovery code is created
-  when you turn Lockdown Mode on and is the only other way to unlock
-  your history. The history locks again automatically after an idle
+  derived from a password you choose wraps the transcript encryption key,
+  and a key derived from a one-time recovery code wraps it separately.
+  While Lockdown Mode is on, the transcript encryption key is stored at
+  rest only in these two wrapped forms; the operating-system key
+  protection described in Section 3.4 no longer holds a copy. The
+  transcripts remain encrypted with AES-256-GCM (see Section 12 for the
+  details). The recovery code is created when you turn Lockdown Mode on
+  and is the only other way to unlock your history. The history locks again automatically after an idle
   period you set, and repeated failed unlock attempts trigger
   escalating delays.
 - **Or you can choose to save nothing.** Instead of a
@@ -1523,8 +1525,9 @@ cleanup. In particular:
   layer to the transcript history. A key derived from a password you
   choose (using the scrypt key-derivation function) and a separate key
   derived from a one-time recovery code each wrap the transcript
-  encryption key using AES-256-GCM, on top of the at-rest encryption
-  and operating-system key protection described above. The
+  encryption key using AES-256-GCM, in place of the operating-system
+  key protection described above, while the transcript content remains
+  encrypted at rest as described above. The
   transcript history locks automatically after an idle period you set,
   and repeated failed unlock attempts trigger escalating delays.
   Lanreal never receives your password or your recovery code.
