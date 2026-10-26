@@ -2049,7 +2049,9 @@ function ReadyApp({ initialEulaStatus, onConsentRequired }: ReadyAppProps) {
       }}
     >
       <div data-tauri-drag-region className="absolute top-0 left-0 h-10 w-44 z-10" />
-      <div className="flex h-full p-2 gap-2.5">
+      {/* The sidebar is the window's left pane, flush to its edges; the
+          content card floats beside it. */}
+      <div className="flex h-full gap-2.5 pr-2">
         <Sidebar
           activeTab={tab}
           onTabChange={setTab}
@@ -2059,7 +2061,7 @@ function ReadyApp({ initialEulaStatus, onConsentRequired }: ReadyAppProps) {
         />
 
         <main
-          className="relative flex-1 h-full overflow-hidden backdrop-blur-xl shadow-glass"
+          className="relative flex-1 my-2 overflow-hidden backdrop-blur-xl shadow-glass"
           style={{
             borderRadius: "var(--radius-card)",
             background: "var(--surface-card)",
