@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import logoUrl from "../assets/logo.png";
 import { EnhancementIcon } from "./EnhancementIcon";
+import { usesNativeWindowControls } from "../lib/windowChrome";
 
 export type TabId = "home" | "audio" | "controls" | "dictionary" | "transcripts" | "enhancement" | "agents" | "about" | "ui-test";
 
@@ -108,15 +109,16 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTab, onTabChange, status, devEnabled = false, attention }: SidebarProps) {
+  const nativeWindowControls = usesNativeWindowControls();
   return (
-    <div className="w-[220px] h-full shrink-0 flex flex-col select-none overflow-hidden backdrop-blur-xl rounded-[var(--radius-card)] border shadow-glass-sm"
+    <div className="w-[228px] h-full shrink-0 flex flex-col select-none overflow-hidden backdrop-blur-xl border-r"
       style={{ backgroundColor: "var(--surface-sidebar)", borderColor: "var(--border-standard)" }}>
       {/* Brand */}
       <motion.div
         initial={{ opacity: 0, y: -3 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.2, 0.8, 0.2, 1] }}
-        className="px-4 pt-6 pb-5 flex items-center gap-[7px]"
+        className={`px-4 ${nativeWindowControls ? "pt-13" : "pt-8"} pb-5 flex items-center gap-[7px]`}
       >
         <img
           src={logoUrl}

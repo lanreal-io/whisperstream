@@ -10,8 +10,8 @@ use objc2::runtime::{AnyClass, AnyObject, Bool, ClassBuilder, NSObject};
 use objc2::{define_class, ffi, msg_send, AnyThread, ClassType, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
     NSApplicationActivationOptions, NSPanel, NSRunningApplication, NSTrackingArea,
-    NSTrackingAreaOptions, NSView, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask,
-    NSWorkspace, NSWorkspaceDidWakeNotification, NSWorkspaceScreensDidWakeNotification,
+    NSTrackingAreaOptions, NSView, NSWindow, NSWindowButton, NSWindowCollectionBehavior,
+    NSWindowStyleMask, NSWindowTitleVisibility, NSWorkspace, NSWorkspaceDidWakeNotification, NSWorkspaceScreensDidWakeNotification,
 };
 use objc2_foundation::{NSActivityOptions, NSProcessInfo, NSString};
 use objc2_service_management::{SMAppService, SMAppServiceStatus};
@@ -786,6 +786,40 @@ fn install_overlay_spaces_policy(app: &tauri::AppHandle) -> Result<(), Box<dyn s
     Ok(())
 }
 
+/// Give the shared undecorated main window native macOS chrome: traffic
+/// lights, rounded corners and the system shadow. The title bar is a
+/// transparent overlay over full-size content, so the web layout is unchanged
+/// and its own drag regions still move the window. Windows keeps its custom
+/// controls; `trafficLightPosition` in tauri.conf.json places these buttons.
+fn install_main_window_chrome(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let window = app
+        .get_webview_window(window_label(WindowRole::Main))
+        .ok_or("missing main window")?;
+    let pointer = window.ns_window()?;
+    // setup runs on AppKit's main thread, before the main window is first
+    // shown; Tauri's view positions the buttons on draw, so they must exist
+    // before then.
+    let native = unsafe { &*(pointer as *const NSWindow) };
+    native.setStyleMask(
+        native.styleMask()
+            | NSWindowStyleMask::Titled
+            | NSWindowStyleMask::Closable
+            | NSWindowStyleMask::Miniaturizable
+            | NSWindowStyleMask::FullSizeContentView,
+    );
+    native.setTitlebarAppearsTransparent(true);
+    native.setTitleVisibility(NSWindowTitleVisibility::Hidden);
+    // The window is fixed-size, so zoom would only show as a blank disabled
+    // button.
+    if let Some(zoom) = native.standardWindowButton(NSWindowButton::ZoomButton) {
+        zoom.setHidden(true);
+    }
+    // A style-mask change can drop the first responder; keep key handling.
+    let content = native.contentView();
+    native.makeFirstResponder(content.as_deref().map(AsRef::as_ref));
+    Ok(())
+}
+
 /// Native hover signal for the recording control's webview.
 pub(crate) const RECORDING_CONTROL_HOVER_EVENT: &str = "recording-control-hover";
 
@@ -962,6 +996,7 @@ pub(crate) fn install(
     presentation: LaunchPresentation,
 ) -> Result<(), Box<dyn std::error::Error>> {
     install_overlay_spaces_policy(app.handle())?;
+    install_main_window_chrome(app.handle())?;
     install_system_wake_observer(app.handle());
     hold_app_nap_exemption();
     if let Err(error) = install_recording_control_hover_tracking(app.handle()) {

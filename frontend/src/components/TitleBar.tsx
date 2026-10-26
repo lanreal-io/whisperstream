@@ -1,5 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { applyWindowLifecycle } from "../lib/windowLifecycle";
+import { usesNativeWindowControls } from "../lib/windowChrome";
 
 export function TitleBar() {
   const minimize = async () => {
@@ -11,6 +12,10 @@ export function TitleBar() {
     if (await applyWindowLifecycle("main", "close-request")) return;
     try { await getCurrentWindow().close(); } catch {}
   };
+
+  if (usesNativeWindowControls()) {
+    return <div data-tauri-drag-region className="absolute top-0 left-0 right-0 h-10 z-20" />;
+  }
 
   return (
     <div
