@@ -141,8 +141,8 @@ def create_advanced_capability_report(platform_name: str) -> AdvancedCapabilityR
             "raw-path-boundary-unavailable",
         )
         states["tts-synthesis-playback"] = (
-            AdvancedCapabilityState.EXTERNAL_DEPENDENCY,
-            "supertonic-native-runtime-prerequisite",
+            AdvancedCapabilityState.AVAILABLE,
+            "darwin-playback",
         )
         states["agent-hook-lifecycle"] = (
             AdvancedCapabilityState.AVAILABLE,

@@ -22,7 +22,7 @@ def test_explicit_voice_preferences_survive_platform_defaults(monkeypatch, syste
     assert WhisperstreamConfig.from_dict({'agent_speech_engine': saved}).agent_speech_engine == saved
 
 
-def test_fresh_mac_automatic_voice_can_resolve_reviewed_kokoro_runtime(monkeypatch):
+def test_fresh_mac_automatic_voice_offers_both_engines(monkeypatch):
     monkeypatch.setattr('whisperstream.config_manager.platform.system', lambda: 'Darwin')
     engine = MagicMock()
     engine.is_installed.return_value = True
@@ -32,9 +32,9 @@ def test_fresh_mac_automatic_voice_can_resolve_reviewed_kokoro_runtime(monkeypat
     try:
         default = WhisperstreamConfig().agent_speech_engine
         resolved = policy.resolve(default, supertonic_voice=1, kokoro_voice='af_heart')
-        assert [candidate.engine_key for candidate in resolved.candidates] == ['kokoro']
+        assert [candidate.engine_key for candidate in resolved.candidates] == ['kokoro', 'supertonic']
         explicit = policy.resolve('supertonic', supertonic_voice=1, kokoro_voice='af_heart')
-        assert not explicit.candidates
-        assert manager.health_reason('supertonic') == 'runtime_unavailable'
+        assert [candidate.engine_key for candidate in explicit.candidates] == ['supertonic']
+        assert manager.health_reason('supertonic') is None
     finally:
         adapter.close()

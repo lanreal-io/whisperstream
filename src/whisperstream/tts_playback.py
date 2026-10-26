@@ -22,7 +22,7 @@ from .tts_playback_contract import (
 def speech_engine_supported(engine_key: str, *, platform_name: str | None = None) -> bool:
     """Static runtime support, separate from installed assets and health."""
     system = platform_name or platform.system()
-    return engine_key == "kokoro" if system == "Darwin" else system == "Windows" and engine_key in {"kokoro", "supertonic"}
+    return system in {"Darwin", "Windows"} and engine_key in {"kokoro", "supertonic"}
 
 
 class UnavailableSpeechSynthesisAdapter:

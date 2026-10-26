@@ -4,7 +4,7 @@
   "assets": [
     {
       "path": "frontend/src/assets/documentation/Whisperstream-Documentation.pdf",
-      "sha256": "3e0ce02956af751649dd4195571e970b0f9071af0d00de5c87ff6390e3de7b07",
+      "sha256": "7795d3a4e426d358cbe690c0c0aeda71ac777a855985efeb05df1b515a9f5557",
       "generator": "npm --prefix docs/offline/toolchain run docs:offline"
     },
     {

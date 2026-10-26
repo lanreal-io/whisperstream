@@ -1102,20 +1102,16 @@ class TestSpeechShutdown:
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
 
-def test_mac_status_and_download_preserve_runtime_gate_before_assets_exist(monkeypatch):
+def test_mac_status_offers_supertonic_download_before_assets_exist(monkeypatch):
     from whisperstream.tts_playback import speech_engine_supported
     monkeypatch.setattr("whisperstream.server.routes.speech.speech_engine_supported", lambda key: speech_engine_supported(key, platform_name="Darwin"))
     client, server = _make_client(config=_make_mock_config(agent_speech_engine="supertonic"))
     with patch("whisperstream.server.routes.speech.is_present", return_value=False):
         body = client.get("/api/speech/status").json()
-    assert body["engines"]["supertonic"]["supported"] is False
+    assert body["engines"]["supertonic"]["supported"] is True
     assert body["engines"]["kokoro"]["supported"] is True
-    assert body["reason"] == "runtime_unavailable"
-    assert body["recommended_downloads"] == []
-    with patch("whisperstream.server.app.threading.Thread") as thread:
-        response = client.post("/api/speech/download/start", json={"engine": "supertonic"})
-    assert response.status_code == 409
-    thread.assert_not_called()
+    assert body["reason"] == "missing_supertonic"
+    assert body["recommended_downloads"] == ["supertonic"]
 
 
 @pytest.fixture(autouse=True)

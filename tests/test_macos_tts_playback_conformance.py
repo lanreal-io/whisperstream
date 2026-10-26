@@ -166,7 +166,7 @@ def test_darwin_factories_are_lazy_and_platform_scoped() -> None:
     assert isinstance(synthesis, MacOSSpeechSynthesisAdapter)
     assert isinstance(playback, MacOSSpeechPlaybackAdapter)
     assert constructed == []
-    assert manager.health_reason("supertonic") == "runtime_unavailable"
+    assert manager.health_reason("supertonic") is None
     assert isinstance(
         create_speech_playback_adapter(system="Linux", machine="arm64"),
         UnavailableSpeechPlaybackAdapter,

@@ -50,11 +50,7 @@ EXPECTED_CAPABILITIES = {
         "explain",
     ),
     "local-llm-runtime": ("available", "metal-runtime", "enable"),
-    "tts-synthesis-playback": (
-        "external-dependency",
-        "supertonic-native-runtime-prerequisite",
-        "explain",
-    ),
+    "tts-synthesis-playback": ("available", "darwin-playback", "enable"),
 }
 
 
@@ -247,8 +243,8 @@ def probe(app: Path, model_source: Path, output: Path) -> dict[str, Any]:
         if (
             config_payload.get("agent_speech_enabled") is not False
             or supertonic.get("available") is not False
-            or supertonic.get("unavailable_reason")
-            not in {"model_unavailable", "runtime_unavailable"}
+            or supertonic.get("supported") is not True
+            or supertonic.get("unavailable_reason") != "model_unavailable"
             or hook_payload != {}
         ):
             raise PackagedAdvancedProbeError("packaged speech or fail-open truth changed")
@@ -285,13 +281,12 @@ def probe(app: Path, model_source: Path, output: Path) -> dict[str, Any]:
             "external_dependency": sum(
                 value[0] == "external-dependency" for value in observed.values()
             ),
-            "supertonic_prerequisite_reported": True,
             "updater_present": False,
         },
         "speech": {
             "default_off": True,
-            "supertonic_runtime_available": False,
-            "supertonic_runtime_reason": "reviewed-native-runtime-prerequisite",
+            "supertonic_supported": True,
+            "supertonic_model_reason": "model_unavailable",
             "output_stream_opened": False,
         },
         "agent": {
