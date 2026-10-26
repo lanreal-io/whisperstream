@@ -359,6 +359,58 @@ def _inert_agent_plugin_startup_refresh(request, monkeypatch):
     monkeypatch.setattr(WhisperstreamServer, "_refresh_codex_plugin", _inert)
 
 
+_AGENT_CLI_HOME_VARS = {"claude": "CLAUDE_CONFIG_DIR", "codex": "CODEX_HOME"}
+
+
+def _inside_temp(path, temp_root: Path) -> bool:
+    try:
+        return Path(path).resolve().is_relative_to(temp_root)
+    except (OSError, TypeError, ValueError):
+        return False
+
+
+@pytest.fixture(autouse=True)
+def _block_real_agent_cli(monkeypatch):
+    """No test may run the developer's real ``claude`` or ``codex`` CLI.
+
+    Plugin install and reconcile paths shell out to the provider CLI, which
+    writes the real user-scope provider config. A leaked run once registered a
+    ``whisperstream`` marketplace pointing at a pytest temp dir, and the
+    installed app then refused to connect with ``marketplace_conflict``. Login
+    shell PATH merging (``ensure_user_path``) makes such CLIs discoverable even
+    when pytest's own PATH lacks them, so the guard sits at process creation.
+
+    Stub executables under the temp dir are allowed, as are real CLIs whose
+    provider home (``CLAUDE_CONFIG_DIR``/``CODEX_HOME``) points into it, which
+    is how the opt-in ``WHISPERSTREAM_TEST_PLUGIN_CLI`` tests isolate them.
+    Blocked spawns raise ``PermissionError``, an ``OSError`` the plugin code
+    already reports as a CLI failure.
+    """
+    import subprocess
+    import tempfile
+
+    temp_root = Path(tempfile.gettempdir()).resolve()
+    original_init = subprocess.Popen.__init__
+
+    def guarded_init(self, *args, **kwargs):
+        command = args[0] if args else kwargs.get("args")
+        argv = [command] if isinstance(command, (str, bytes, os.PathLike)) else list(command or ())
+        program = kwargs.get("executable") or (argv[0] if argv else None)
+        if program is not None and not kwargs.get("shell"):
+            program = os.fsdecode(program)
+            home_var = _AGENT_CLI_HOME_VARS.get(Path(program).stem.lower())
+            if home_var and not _inside_temp(program, temp_root):
+                home = (kwargs.get("env") or os.environ).get(home_var)
+                if not (home and _inside_temp(home, temp_root)):
+                    raise PermissionError(
+                        f"Tests must not run the real {Path(program).name} CLI; fake the "
+                        f"plugin CLI runner or point {home_var} into tmp_path."
+                    )
+        original_init(self, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess.Popen, "__init__", guarded_init)
+
+
 @pytest.fixture(autouse=True)
 def _restore_whisperstream_log_propagation():
     """Let pytest's caplog see records emitted on the 'whisperstream' logger tree.
