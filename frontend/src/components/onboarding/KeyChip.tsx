@@ -1,23 +1,7 @@
+import { shortcutDisplayParts } from "../../lib/shortcutDisplay";
+
 interface KeyChipProps {
   keys: string;
-}
-
-// Title-case a token preserving common multi-word key names. `"right shift"`
-// → `"Right Shift"`, `"ctrl"` → `"Ctrl"`, `"space"` → `"Space"`. Preserves
-// pre-existing capitalization if the user already typed it mixed-case.
-function titleCase(token: string): string {
-  return token
-    .trim()
-    .split(/\s+/)
-    .map((word) => {
-      if (!word) return word;
-      // If the user already mixed case, trust them (e.g. "F1" stays "F1").
-      if (word !== word.toLowerCase() && word !== word.toUpperCase()) {
-        return word;
-      }
-      return word[0].toUpperCase() + word.slice(1).toLowerCase();
-    })
-    .join(" ");
 }
 
 // Inline display of the user's shortcut. Splits on `+` and renders each
@@ -26,15 +10,12 @@ function titleCase(token: string): string {
 // frost gradient is reserved in this app for primary CTAs, not key labels.
 //
 // Locked rules (design.md §Design Decisions):
-//   - Preserves original case from the user's string (matches how
-//     ShortcutCapture displays key names).
+//   - Key names come from shortcutDisplayParts, so they match the
+//     ShortcutCapture chip (Mac glyphs, worded sides like "Right Shift").
 //   - Multi-key shortcuts render as `[Ctrl] + [Alt] + [Space]` with thin
 //     `+` separators.
 export function KeyChip({ keys }: KeyChipProps) {
-  const tokens = (keys || "")
-    .split("+")
-    .map((t) => t.trim())
-    .filter(Boolean);
+  const tokens = shortcutDisplayParts(keys || "");
 
   if (tokens.length === 0) {
     return (
@@ -64,7 +45,7 @@ export function KeyChip({ keys }: KeyChipProps) {
                 "inset 0 1px 0 rgb(255 255 255 / calc(0.95 * var(--rim-scale))), 0 2px 8px color-mix(in srgb, var(--color-frost) 20%, transparent)",
             }}
           >
-            {titleCase(token)}
+            {token}
           </span>
           {i < tokens.length - 1 && (
             <span className="text-[11px] text-steel/40">+</span>

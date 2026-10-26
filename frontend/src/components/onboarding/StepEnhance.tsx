@@ -368,7 +368,7 @@ export function StepEnhance({
               index={exampleIndex}
               state={tryState}
               warm={llamaReady}
-              shortcut={config.primary_shortcut}
+              shortcut={config.push_to_talk_shortcut}
               onRetry={() => setTryState({ kind: "ready" })}
             />
           </motion.div>

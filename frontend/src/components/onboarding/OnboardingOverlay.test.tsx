@@ -376,6 +376,34 @@ describe("OnboardingOverlay exact STT routing", () => {
     await screen.findByText("Ready");
     expect(startDownload).not.toHaveBeenCalled();
   });
+
+  it("names the push-to-talk shortcut chosen in Step 2, not the legacy primary", async () => {
+    getSttStatus.mockResolvedValue(
+      sttStatus({
+        configured: PARAKEET_V3,
+        loaded: PARAKEET_V3,
+        downloaded: [PARAKEET_V3],
+      }),
+    );
+
+    renderOnboarding(
+      makeConfig({
+        language: "fr",
+        stt_model_selection_mode: "automatic",
+        stt_backend: "parakeet",
+        parakeet_model: PARAKEET_V3,
+        primary_shortcut: "right shift",
+        push_to_talk_shortcut: "ctrl+right alt",
+        setup_completed: false,
+      }),
+    );
+
+    await screen.findByText("Shortcut step");
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+
+    const prompt = (await screen.findByText(/and say something/)).closest("p");
+    expect(prompt?.textContent).toBe("Hold Ctrl+Right Alt and say something.");
+  });
 });
 
 describe("OnboardingOverlay Enhance step", () => {

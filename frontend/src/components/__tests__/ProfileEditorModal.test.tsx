@@ -461,7 +461,7 @@ describe("ProfileEditorModal — hotkey card", () => {
 
   it("renders the captured shortcut without a resting clear action", () => {
     render(<ProfileEditorModal {...makeProps({ hotkey: "ctrl+alt+1" })} />);
-    expect(screen.getByText("ctrl+alt+1")).toBeInTheDocument();
+    expect(screen.getByText("Ctrl+Alt+1")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Clear shortcut" })).toBeNull();
   });
 
@@ -470,7 +470,7 @@ describe("ProfileEditorModal — hotkey card", () => {
     render(
       <ProfileEditorModal {...makeProps({ hotkey: "ctrl+alt+1", onHotkeyChange })} />,
     );
-    fireEvent.click(screen.getByText("ctrl+alt+1"));
+    fireEvent.click(screen.getByText("Ctrl+Alt+1"));
     fireEvent.click(screen.getByRole("button", { name: "Clear shortcut" }));
     expect(onHotkeyChange).toHaveBeenCalledWith("");
   });

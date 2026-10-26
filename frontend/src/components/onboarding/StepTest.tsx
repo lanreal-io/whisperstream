@@ -221,7 +221,7 @@ export function StepTest({
 
             {/* Centered prompt line with inline KeyChip */}
             <p className="mt-5 text-center text-[13px] text-steel">
-              Press <KeyChip keys={config.primary_shortcut} /> and say something.
+              Hold <KeyChip keys={config.push_to_talk_shortcut} /> and say something.
             </p>
 
             <textarea
