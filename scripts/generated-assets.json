@@ -14,7 +14,7 @@
     },
     {
       "path": "frontend/src/assets/legal/PRIVACY.pdf",
-      "sha256": "77a02c652dab913614d687cd74dec8ddba20f6116cd4e7b0189e9ac0784aea06",
+      "sha256": "af43980b785d398025466f2eb8be1a7e019e3ad494691a4de0ca6ce108c8520a",
       "generator": "uv run python scripts/generate-legal-pdfs.py"
     },
     {

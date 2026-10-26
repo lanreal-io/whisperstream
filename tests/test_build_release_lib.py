@@ -304,11 +304,22 @@ class TestLegalReleaseDocuments:
         with pytest.raises(b.LegalReleaseGateError, match="YYYY-MM-DD format"):
             b.validate_legal_release_documents(tmp_path, source_only=True)
 
-    def test_rejects_eula_privacy_source_date_mismatch(self, tmp_path):
-        _write_legal_headers(tmp_path, privacy_source_date="2026-07-29")
+    def test_accepts_independent_eula_and_privacy_dates(self, tmp_path):
+        _write_legal_headers(
+            tmp_path, privacy_source_date="2026-07-29", privacy_bundle_date="2026-07-29"
+        )
 
-        with pytest.raises(b.LegalReleaseGateError, match="do not match"):
-            b.validate_legal_release_documents(tmp_path, source_only=True)
+        b.validate_legal_release_documents(tmp_path)
+
+    def test_required_publication_date_applies_to_each_document(self, tmp_path):
+        _write_legal_headers(
+            tmp_path, privacy_source_date="2026-07-29", privacy_bundle_date="2026-07-29"
+        )
+
+        with pytest.raises(b.LegalReleaseGateError, match="Privacy source effective date"):
+            b.validate_legal_release_documents(
+                tmp_path, required_effective_date="2026-07-28"
+            )
 
     def test_rejects_effective_date_other_than_required_publication_date(
         self, tmp_path

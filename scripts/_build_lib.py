@@ -394,16 +394,16 @@ def validate_legal_release_documents(
 
     Unreleased work may deliberately retain ``YYYY-MM-DD`` placeholders.
     Callers that create or publish a signed artifact must use this validator
-    so a placeholder, malformed calendar date, stale derived file, or
-    EULA/Privacy date mismatch fails closed. Document versions are independent;
-    each bundled document must still match its own canonical source.
+    so a placeholder, malformed calendar date or stale derived file fails
+    closed. Document versions and effective dates are independent; each
+    bundled document must still match its own canonical source.
 
     Args:
         root: Checkout containing ``legal/`` and ``src-tauri/resources/``.
         source_only: Check only the canonical Markdown sources. The signed
             build uses this fail-fast mode before deriving bundled plaintext,
             then checks all four files after derivation.
-        required_effective_date: When provided, require both source documents
+        required_effective_date: When provided, require each source document
             to use this exact date. Release passes its run date so a build
             prepared for an earlier publication date cannot ship unchanged.
     """
@@ -473,20 +473,13 @@ def validate_legal_release_documents(
                 )
         parsed[label] = (version, effective)
 
-    if "EULA source" in parsed and "Privacy source" in parsed:
-        if parsed["EULA source"][1] != parsed["Privacy source"][1]:
-            errors.append(
-                "EULA and Privacy source Effective dates do not match"
-            )
-        elif (
-            required_effective_date is not None
-            and parsed["EULA source"][1] != required_effective_date
-        ):
-            errors.append(
-                "EULA and Privacy effective date "
-                f"{parsed['EULA source'][1]!r} does not match required "
-                f"publication date {required_effective_date!r}"
-            )
+    if required_effective_date is not None:
+        for label in ("EULA source", "Privacy source"):
+            if label in parsed and parsed[label][1] != required_effective_date:
+                errors.append(
+                    f"{label} effective date {parsed[label][1]!r} does not "
+                    f"match required publication date {required_effective_date!r}"
+                )
 
     if not source_only:
         for source_label, bundle_label in (
@@ -537,9 +530,9 @@ def validate_legal_release_documents(
         raise LegalReleaseGateError(
             "legal documents are not ready for a signed release:\n"
             f"  - {joined}\n"
-            "Set the actual publication date in legal/EULA.md and "
-            "legal/PRIVACY.md, then regenerate bundled plaintext and verify "
-            "the active EULA policy."
+            "Set each document's actual publication date in legal/EULA.md "
+            "and legal/PRIVACY.md, then regenerate bundled plaintext and "
+            "verify the active EULA policy."
         )
 
 
