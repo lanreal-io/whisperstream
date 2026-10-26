@@ -1,32 +1,33 @@
 WHISPERSTREAM PRIVACY POLICY
 ============================
 
-Version 1.0
+Version 1.1
 
-Effective 2026-10-22
+Effective 2026-10-26
 
 This Privacy Policy explains how Lanreal Technologies Inc.
 ("Lanreal," "we," "us," or "our") collects, uses, shares, and
 retains personal information in connection with the Whisperstream
-desktop application for Microsoft Windows (the "Software"). It also
-describes the rights you have with respect to that personal
-information and how to exercise them.
+desktop application for Microsoft Windows and Apple macOS (the
+"Software"). It also describes the rights you have with respect to
+that personal information and how to exercise them.
 
 1. INTRODUCTION AND SCOPE
 =========================
 
 Whisperstream is a local, on-device dictation application for
-Microsoft Windows. It captures microphone audio when you press a
-push-to-talk hotkey, transcribes that audio on your own computer
-using a speech recognition model that runs entirely on your CPU, and
-types the resulting text into the focused window. Speech recognition
-runs on your device. The source edition is free of charge and
-includes all features without activation. It does not validate
-licenses or submit in-app ratings, reviews, feedback or feature
-requests. This policy applies whether you build the Software from
-source or install it with the official installer. Built from source,
-it makes no application-update requests; installed from the official
-installer, it checks for signed updates (Section 3.2).
+Microsoft Windows and for macOS on Apple silicon. It captures
+microphone audio when you press a push-to-talk hotkey, transcribes
+that audio on your own computer using a speech recognition model
+that runs entirely on your device, and types the resulting text into
+the focused window. Speech recognition runs on your device. The
+source edition is free of charge and includes all features without
+activation. It does not validate licenses or submit in-app ratings,
+reviews, feedback or feature requests. This policy applies whether
+you build the Software from source or install it with the official
+installer. Built from source, it makes no application-update
+requests; installed from the official installer, it checks for
+signed updates (Section 3.2).
 
 App-managed model downloads use pinned public Hugging Face URLs,
 with GitHub release archives available as a verified backup for
@@ -163,9 +164,10 @@ engine, the Software downloads the required model if it is not
 already installed. Parakeet, Qwen and Cohere model files use pinned
 public Hugging Face URLs. Requests can redirect through Hugging
 Face's file-delivery infrastructure, including its Xet/CDN delivery
-hosts. For Parakeet v2/v3, Qwen and Cohere, if the source remains
-unavailable after retries, the Software tries the matching upstream
-sherpa-onnx release archive at github.com and
+hosts. For Parakeet v2/v3, Qwen and Cohere (except the macOS Core ML
+model described below), if the source remains unavailable after
+retries, the Software tries the matching upstream sherpa-onnx
+release archive at github.com and
 release-assets.githubusercontent.com. The archive is verified
 against a packaged checksum before extraction and required files are
 verified before installation. Cancellation, disk, integrity and
@@ -173,6 +175,13 @@ download-policy failures do not trigger a backup. The serving hosts
 receive your IP address, ordinary HTTP headers including the
 download library's User-Agent, and the requested URL, which
 identifies the model.
+
+On macOS, the multilingual Parakeet v3 model is a Core ML version
+downloaded from a pinned Hugging Face repository and its delivery
+hosts, with no automatic backup host. It is stored under
+~/Library/Application Support/FluidAudio/Models/, or in the storage
+location you choose for it, rather than in the Whisperstream
+application data directory (Section 3.4).
 
 These public downloads connect directly from your device to the
 upstream file hosts and their delivery infrastructure. They do not
@@ -209,13 +218,14 @@ application and the optional outbound flows identified below are the
 specific exceptions to local-only handling:
 
 - Audio recordings. Microphone audio is held in random-access memory
-  while each push-to-talk capture is transcribed on your CPU, and is
-  never uploaded to any server. If you keep the local transcript
-  history enabled with audio saving on (both are on by default, and
-  both can be turned off), a copy of the recording is also stored,
-  encrypted, on your own device, as described in the "Local
-  transcript history" entry below. No audio data is ever transmitted
-  off your device.
+  while each push-to-talk capture is transcribed on your device, and
+  is never uploaded to any server. When local transcript history and
+  audio saving are both on (on Windows both are on by default; on
+  macOS transcript saving stays off until you turn it on, and audio
+  saving is then on by default; both can be turned off), a copy of
+  the recording is also stored, encrypted, on your own device, as
+  described in the "Local transcript history" entry below. No audio
+  data is ever transmitted off your device.
 
 Voice data is not biometric data. The speech recognition model
 processes your voice solely to convert speech into text. It does not
@@ -230,68 +240,73 @@ constitute biometric data within the meaning of Article 9.
 
 - Transcribed text. The text produced by the speech recognition
   model is typed into the window you have focused. If you keep the
-  local transcript history enabled (it is on by default and can be
-  turned off), the transcribed text (both the raw transcript and, if
-  you use the optional AI cleanup feature, the enhanced version) is
-  also stored, encrypted, on your own device, as described in the
-  "Local transcript history" entry below. Transcribed text is never
+  local transcript history enabled (it is on by default on Windows,
+  is off on macOS until you turn it on, and can be turned off), the
+  transcribed text (both the raw transcript and, if you use the
+  optional AI cleanup feature, the enhanced version) is also stored,
+  encrypted, on your own device, as described in the "Local
+  transcript history" entry below. Transcribed text is never
   transmitted to Lanreal or retained by Lanreal in any form.
 - Local transcript history. The Software keeps a searchable history
   of your past dictations on your own device so that you can review,
-  copy, and replay them. This history is enabled by default and can
-  be fully disabled. It stores your transcribed text (the raw
-  transcript and, where you used AI cleanup, the enhanced version)
-  and, when audio saving is enabled, the recorded audio. The
-  transcribed text and the audio are encrypted at rest using
-  AES-256-GCM. The AES data key is protected with Windows
-  user-scoped DPAPI. Windows normally limits decryption to the
-  protecting user's credentials on that computer; a roaming profile
-  can permit decryption on another computer. This protection does
-  not isolate the key from processes acting with that user's
-  authority. The raw transcript, enhanced transcript, saved audio,
-  and waveform peaks used by the player are encrypted separately.
-  Lightweight index metadata (such as a record identifier,
-  timestamp, duration, model name, source type, and relative
-  audio-file location) is stored unencrypted so the list can be
-  sorted and displayed without decrypting its content. The history
-  is kept inside your Windows user profile under
-  %LOCALAPPDATA%\Whisperstream\ (a transcripts.db index and a
-  recordings\ folder). History is not uploaded automatically. You
-  may separately copy or export content, or explicitly request cloud
-  reprocessing as described in Section 6. You control it: a master
-  "Save transcripts" toggle and a separate "Save audio" toggle let
-  you keep a text-only history or turn history off entirely, and a
-  retention window (1, 7, or 30 days, or forever, with 7 days as the
-  default) automatically removes older entries. You may also delete
-  an individual entry or clear the entire history at any time. See
-  Section 8 for retention and deletion details.
+  copy, and replay them. This history is enabled by default on
+  Windows, stays off on macOS until you turn it on, and can be fully
+  disabled. It stores your transcribed text (the raw transcript and,
+  where you used AI cleanup, the enhanced version) and, when audio
+  saving is enabled, the recorded audio. The transcribed text and
+  the audio are encrypted at rest using AES-256-GCM. The AES data
+  key is protected by your operating system. On Windows it is
+  protected with user-scoped DPAPI. Windows normally limits
+  decryption to the protecting user's credentials on that computer;
+  a roaming profile can permit decryption on another computer. On
+  macOS it is stored as an item in your login Keychain that is not
+  set to synchronize through iCloud Keychain. Neither protection
+  isolates the key from processes acting with that user's authority.
+  The raw transcript, enhanced transcript, saved audio, and waveform
+  peaks used by the player are encrypted separately. Lightweight
+  index metadata (such as a record identifier, timestamp, duration,
+  model name, source type, and relative audio-file location) is
+  stored unencrypted so the list can be sorted and displayed without
+  decrypting its content. The history is kept in your application
+  data directory, %LOCALAPPDATA%\Whisperstream\ on Windows or
+  ~/Library/Application Support/Whisperstream/ on macOS (a
+  transcripts.db index and a recordings folder). History is not
+  uploaded automatically. You may separately copy or export content,
+  or explicitly request cloud reprocessing as described in Section
+  6. You control it: a master "Save transcripts" toggle and a
+  separate "Save audio" toggle let you keep a text-only history or
+  turn history off entirely, and a retention window (1, 7, or 30
+  days, or forever, with 7 days as the default) automatically
+  removes older entries. You may also delete an individual entry or
+  clear the entire history at any time. See Section 8 for retention
+  and deletion details.
 - Local diagnostic logs. In ordinary use, voluntary Lockdown Mode,
   and administrator-managed Lockdown Mode, the Software writes
   content-free operational events to a local whisperstream.log file
-  under %LOCALAPPDATA%\Whisperstream\logs\. The active file and up
-  to three backups are each limited to approximately 2 MiB. The
-  Software excludes transcript, voice/audio, and Agent Speak
-  content; passwords; recovery codes; API, transcript-encryption,
-  and license keys or secrets; full email addresses; foreground
-  process identity; imported-audio filenames and paths; browser
-  hosts; and raw error text that could carry user content. Each
-  application window also keeps a bounded in-memory frontend log
-  buffer (up to 500 entries, 2 KiB per entry, and 128 KiB total).
-  The backend re-sanitizes synchronized frontend entries and keeps
-  at most 128 KiB across windows in process memory. A supplemental
-  Lockdown diagnostic file accepts only code-defined event and field
-  names, retains at most 256 events and 128 KiB, and contains no
-  arbitrary user-supplied strings. These logs are never transmitted
-  automatically. Lockdown does not pause, clear, or disable the
-  diagnostic log, frontend capture, or support export.
+  in the logs folder of the application data directory. The active
+  file and up to three backups are each limited to approximately 2
+  MiB. The Software excludes transcript, voice/audio, and Agent
+  Speak content; passwords; recovery codes; API,
+  transcript-encryption, and license keys or secrets; full email
+  addresses; foreground process identity; imported-audio filenames
+  and paths; browser hosts; and raw error text that could carry user
+  content. Each application window also keeps a bounded in-memory
+  frontend log buffer (up to 500 entries, 2 KiB per entry, and 128
+  KiB total). The backend re-sanitizes synchronized frontend entries
+  and keeps at most 128 KiB across windows in process memory. A
+  supplemental Lockdown diagnostic file accepts only code-defined
+  event and field names, retains at most 256 events and 128 KiB, and
+  contains no arbitrary user-supplied strings. These logs are never
+  transmitted automatically. Lockdown does not pause, clear, or
+  disable the diagnostic log, frontend capture, or support export.
 - Usage statistics. The Software keeps aggregate counters of how
   many transcriptions you have run, how many words you have
   transcribed, and how much recording time you have accumulated.
-  These counters are stored locally in your Windows user profile and
-  are never transmitted.
+  These counters are stored locally in the application data
+  directory and are never transmitted.
 - Configuration. Your settings, including your chosen hotkey, audio
   device, and word-override dictionary, are stored locally in a
-  configuration file under your Windows user profile and are not
+  configuration file in the application data directory and are not
   transmitted, except that matching Boost terms from your Dictionary
   are included in optional cloud cleanup requests (Section 6.2).
 - Lockdown access log. While Lockdown Mode is effective, the
@@ -302,9 +317,9 @@ constitute biometric data within the meaning of Article 9.
   audio content, your password or recovery code, or health
   information. The active access.log file and up to five backups are
   each limited to approximately 2 MiB. This audit log is stored only
-  under %LOCALAPPDATA%\Whisperstream\logs\, is not included in
-  support exports, and is not created for ordinary transcript
-  operations outside Lockdown Mode.
+  in the logs folder of the application data directory, is not
+  included in support exports, and is not created for ordinary
+  transcript operations outside Lockdown Mode.
 
 Lanreal does not automatically receive the local stores described in
 this Section 3.4. Particular content may nevertheless leave your
@@ -358,14 +373,17 @@ compliance obligations. When Lockdown Mode is on:
   AI cleanup is forced to the on-device model, so Whisperstream does
   not send that transcript to a configured cleanup provider.
 - Your transcript history is locked behind a password. A key derived
-  from a password you choose additionally wraps the transcript
-  encryption key, on top of the AES-256-GCM encryption at rest and
-  the Windows Data Protection API sealing already described in
-  Section 3.4 (see Section 12 for the details). A one-time recovery
-  code is created when you turn Lockdown Mode on and is the only
-  other way to unlock your history. The history locks again
-  automatically after an idle period you set, and repeated failed
-  unlock attempts trigger escalating delays.
+  from a password you choose wraps the transcript encryption key,
+  and a key derived from a one-time recovery code wraps it
+  separately. While Lockdown Mode is on, the transcript encryption
+  key is stored at rest only in these two wrapped forms; the
+  operating-system key protection described in Section 3.4 no longer
+  holds a copy. The transcripts remain encrypted with AES-256-GCM
+  (see Section 12 for the details). The recovery code is created
+  when you turn Lockdown Mode on and is the only other way to unlock
+  your history. The history locks again automatically after an idle
+  period you set, and repeated failed unlock attempts trigger
+  escalating delays.
 - Or you can choose to save nothing. Instead of a password-protected
   history, you may turn Lockdown Mode on without saving transcripts
   at all, in which case no transcript history is written to your
@@ -444,10 +462,10 @@ telemetry. The model host can retain the ordinary access-log record
 described in Section 8, which can show that a model-specific file
 was requested. Turning the feature off stops the Software from using
 the Voice Models. You can remove a downloaded model from your device
-by deleting its applicable model directory under
-%LOCALAPPDATA%\Whisperstream\models\. If you selected a custom model
-storage location, delete the corresponding models or local-llm
-directory from that custom location instead.
+by deleting its applicable model directory in the models folder of
+the application data directory (Section 3.4). If you selected a
+custom model storage location, delete the corresponding models or
+local-llm directory from that custom location instead.
 
 The Voice Models have different third-party license terms. The
 upstream Kokoro model and lexicon use Apache License 2.0; its eSpeak
@@ -492,13 +510,13 @@ User-configured cloud processing remains governed by Section 6.
 ----------------------------------------------------
 
 If another Whisperstream edition previously ran under the same
-Windows account, this edition uses the same application data
-directory and continues to use its settings, models, transcript
-history and legal-acceptance ledger. Licensing, trial or activation
-records left by that edition, including under
-HKCU\Software\Whisperstream, are not read, modified or transmitted
-and do not limit functionality. They remain until you remove them as
-described in Section 8.
+operating-system user account, this edition uses the same
+application data directory and continues to use its settings,
+models, transcript history and legal-acceptance ledger. Licensing,
+trial or activation records left by that edition, including, on
+Windows, under HKCU\Software\Whisperstream, are not read, modified
+or transmitted and do not limit functionality. They remain until you
+remove them as described in Section 8.
 
 The Software stores local records of the EULA version and content
 hash you accepted, the acceptance time, the Software version, the
@@ -536,16 +554,17 @@ settings.
 
 When you choose a site-routing rule, the Software may read matching
 favicon data from the local Chrome, Edge, or Firefox favicon
-database to display the rule. It first uses a read-only database
-connection. If the browser has locked that database, it may create
-an attributable copy in the operating-system temporary directory.
-The Software closes the copy and makes up to three ordinary deletion
-attempts after use. At startup and before creating another owned
-copy, it also tries to remove only attributable Whisperstream copies
-older than 24 hours. A copy can remain longer after a crash or
-repeated deletion failure; the Software does not broadly delete
-older unattributable browser-database copies. It does not send the
-database, host, or favicon to Lanreal or a network favicon service.
+database (on macOS, also Brave or Chromium) to display the rule. It
+first uses a read-only database connection. If the browser has
+locked that database, it may create an attributable copy in the
+operating-system temporary directory. The Software closes the copy
+and makes up to three ordinary deletion attempts after use. At
+startup and before creating another owned copy, it also tries to
+remove only attributable Whisperstream copies older than 24 hours. A
+copy can remain longer after a crash or repeated deletion failure;
+the Software does not broadly delete older unattributable
+browser-database copies. It does not send the database, host, or
+favicon to Lanreal or a network favicon service.
 
 Whisperstream delivers finished text to the focused destination
 application using a clipboard paste or simulated keystrokes. The
@@ -582,8 +601,8 @@ sensitive. Display state remains local and is excluded from
 diagnostics and exports. Local discovery and managed-session
 capability files contain connection details, including a per-run
 token. They are not content archives. Processes running as your
-Windows user may read them; this is not isolation from other
-same-user processes.
+operating-system user may read them; this is not isolation from
+other same-user processes.
 
 A reply you dictate is saved as an agent_reply entry only when Save
 transcripts is on, using ordinary encrypted history retention. Other
@@ -1004,13 +1023,15 @@ remains the separate user-directed flow described in Section 3.4.
 --------------------
 
 The API key or credential you supply for any of the providers listed
-in Section 6.1 is stored locally on your device within your Windows
-user profile, under %LOCALAPPDATA%\Whisperstream\. The key is
-encrypted at rest using Windows user-scoped DPAPI
-(CryptProtectData). Windows normally limits decryption to the
-protecting user's credentials on that computer; a roaming profile
-can permit decryption on another computer. This protection does not
-isolate the value from processes acting with that user's authority.
+in Section 6.1 is stored locally on your device. On Windows it is
+stored under %LOCALAPPDATA%\Whisperstream\ and encrypted at rest
+using Windows user-scoped DPAPI (CryptProtectData). Windows normally
+limits decryption to the protecting user's credentials on that
+computer; a roaming profile can permit decryption on another
+computer. On macOS it is stored as an item in your login Keychain
+that is not set to synchronize through iCloud Keychain. Neither
+protection isolates the value from processes acting with that user's
+authority.
 
 The stored credential is transmitted only to the provider you
 selected, only over HTTPS with certificate verification enabled, and
@@ -1044,8 +1065,8 @@ credential.
   this Privacy Policy.
 - Deleting your credential. To delete a stored credential, use the
   "remove key" control in the same settings interface. This removes
-  the encrypted credential from your Windows user profile in its
-  entirety.
+  the protected credential (the encrypted Windows copy or the macOS
+  Keychain item) in its entirety.
 - Lockdown Mode override. While Lockdown Mode (Section 3.6) is on,
   all of the cloud providers and self-specified endpoints listed in
   Section 6.1 are disabled and AI cleanup is forced to the on-device
@@ -1218,44 +1239,47 @@ Retention for information the Software controls directly:
 - Audio recordings: not retained by Lanreal, and never transmitted
   off your device. Microphone audio is held in random-access memory
   while each capture is transcribed. If you keep audio saving
-  enabled in the local transcript history (on by default, and
-  separately disableable), a copy of the recording is also stored,
-  encrypted, on your own device, and is removed on the same schedule
-  as the rest of your history (see "Local transcript history"
-  below).
+  enabled in the local transcript history (on by default once
+  history is on, and separately disableable), a copy of the
+  recording is also stored, encrypted, on your own device, and is
+  removed on the same schedule as the rest of your history (see
+  "Local transcript history" below).
 - Transcribed text: not retained by Lanreal. The output of the
   speech recognition model is typed into the focused window. If you
-  keep the local transcript history enabled (on by default), the
-  transcribed text is also stored, encrypted, on your own device and
-  removed on the schedule you set (see "Local transcript history"
-  below). Section 6 describes optional provider requests. Ordinary
-  dictation skips cloud cleanup for transcripts of three words or
-  fewer unless they contain a saved Boost term from your Dictionary;
-  explicit previews and selected saved-text cleanup are separate
-  requests described in Section 6.3. Lanreal does not retain a copy.
-  A provider may retain submitted content after the request ends
-  under its terms, account settings and privacy policy (see Section
-  6.1).
+  keep the local transcript history enabled (on by default on
+  Windows; off on macOS until you turn it on), the transcribed text
+  is also stored, encrypted, on your own device and removed on the
+  schedule you set (see "Local transcript history" below). Section 6
+  describes optional provider requests. Ordinary dictation skips
+  cloud cleanup for transcripts of three words or fewer unless they
+  contain a saved Boost term from your Dictionary; explicit previews
+  and selected saved-text cleanup are separate requests described in
+  Section 6.3. Lanreal does not retain a copy. A provider may retain
+  submitted content after the request ends under its terms, account
+  settings and privacy policy (see Section 6.1).
 - Local transcript history (your transcribed text, encrypted
   waveform peaks, and, optionally, your audio): retained on your own
   device only, encrypted at rest (AES-256-GCM with the data key
-  sealed by the Windows Data Protection API), and never transmitted
-  to Lanreal. You control how long it is kept: a retention window of
-  1, 7, or 30 days, or forever, with 7 days as the default, removes
-  older entries, and you may delete any individual entry or clear
-  the entire history at any time. Retention and orphan-audio cleanup
-  run at startup, after live and imported saves, after a retention
-  change, and after a successful Lockdown unlock. Cleanup that
-  requires the history key is deferred while the history is locked
-  and retried after unlock. Deletion uses ordinary SQLite deletion
-  and file unlinking, not secure disk overwrite. A failed file
-  deletion may be retried by a later cleanup; database free pages or
-  journals, filesystem remnants, backups, shadow copies, and
-  exported copies remain outside the Software's deletion control. If
-  the history cannot be decrypted on your current Windows account
-  (for example, because its protected data key cannot be opened in
-  the current Windows environment), it is not readable and no new
-  entries are written to it.
+  protected by Windows DPAPI or the macOS login Keychain), and never
+  transmitted to Lanreal. You control how long it is kept: a
+  retention window of 1, 7, or 30 days, or forever, with 7 days as
+  the default, removes older entries, and you may delete any
+  individual entry or clear the entire history at any time.
+  Retention and orphan-audio cleanup run at startup, after live and
+  imported saves, after a retention change, and after a successful
+  Lockdown unlock. Cleanup that requires the history key is deferred
+  while the history is locked and retried after unlock. Deletion
+  uses ordinary SQLite deletion and file unlinking, not secure disk
+  overwrite. A failed file deletion may be retried by a later
+  cleanup; database free pages or journals, filesystem remnants,
+  backups, shadow copies, and exported copies remain outside the
+  Software's deletion control. If the history cannot be decrypted on
+  your current user account (for example, because its protected data
+  key cannot be opened in the current Windows or macOS environment),
+  it is not readable and no new entries are written to it. On macOS,
+  the protected key is a login Keychain item labelled "Whisperstream
+  transcript encryption key"; deleting the app or its data directory
+  does not remove it, and you can delete it in Keychain Access.
 - Local diagnostic logs: the active file and up to three 2 MiB
   backups are retained locally by size-based rotation in ordinary
   use, voluntary Lockdown, and administrator-managed Lockdown. The
@@ -1274,18 +1298,20 @@ Retention for information the Software controls directly:
   across windows. Ring eviction or process/window exit releases that
   state. Lockdown transitions do not clear the rings.
 - Local usage statistics and configuration: retained locally on your
-  device until you delete the relevant records or the
-  %LOCALAPPDATA%\Whisperstream\ directory. Uninstalling the Software
-  does not automatically delete them.
+  device until you delete the relevant records or the application
+  data directory (%LOCALAPPDATA%\Whisperstream\ on Windows,
+  ~/Library/Application Support/Whisperstream/ on macOS).
+  Uninstalling the Software does not automatically delete them.
 - Legal-acceptance state and other local edition records (Section
-  3.9): retained in the current user's Windows registry and
-  application data until you remove those records. Uninstalling does
-  not necessarily remove them. Licensing, trial or activation
-  records left by another edition may persist across
-  reinstallations, but this edition does not read them or use them
-  to restrict functionality. Exact EULA acceptance events remain in
-  the append-only local ledger so accepting updated terms does not
-  erase prior evidence.
+  3.9): retained in the application data directory and, for records
+  another edition left on Windows, the current user's Windows
+  registry, until you remove those records. Uninstalling does not
+  necessarily remove them. Licensing, trial or activation records
+  left by another edition may persist across reinstallations, but
+  this edition does not read them or use them to restrict
+  functionality. Exact EULA acceptance events remain in the
+  append-only local ledger so accepting updated terms does not erase
+  prior evidence.
 - Agent Speak interaction content (Section 3.11): responses,
   questions, permissions, display state and drafts remain in bounded
   process memory. Temporary hook interactions expire;
@@ -1297,12 +1323,16 @@ Retention for information the Software controls directly:
   when enabled. The independent coding agent's storage follows its
   own practices.
 - Credentials you supply for the optional cloud post-processing
-  feature (Section 6): retained locally on your device,
-  DPAPI-encrypted, inside your Windows user profile, until you
+  feature (Section 6): retained locally on your device until you
   remove the credential through the Software's settings interface
-  (see Section 6.5) or until you uninstall the Software and delete
-  the %LOCALAPPDATA%\Whisperstream\ directory. Lanreal does not
-  retain, store, or have any visibility into this credential.
+  (see Section 6.5). On Windows it is DPAPI-encrypted in the
+  application data directory and is also removed if you uninstall
+  the Software and delete the %LOCALAPPDATA%\Whisperstream\
+  directory. On macOS it is a login Keychain item labelled
+  "Whisperstream AI provider API key"; deleting the app or its data
+  directory does not remove it, and you can delete it in Keychain
+  Access. Lanreal does not retain, store, or have any visibility
+  into this credential.
 - Diagnostic archives and logs: the support ZIP is assembled in
   backend memory and streamed to your selected download destination,
   with no app-managed ZIP retention. The ZIP may contain recent
@@ -1316,14 +1346,14 @@ Retention for information the Software controls directly:
   with a bug report follow the retention criteria for correspondence
   above, including any earlier applicable commitment requiring
   shorter retention. They are deleted or anonymized when no longer
-  needed for those permitted purposes. The DPAPI-encrypted
-  credential you supply for the optional cloud post-processing
-  feature (Section 6.4) is not part of the bug-report log export, so
-  it is not inadvertently transmitted when you submit a bug report.
+  needed for those permitted purposes. The protected credential you
+  supply for the optional cloud post-processing feature (Section
+  6.4) is not part of the bug-report log export, so it is not
+  inadvertently transmitted when you submit a bug report.
 - Star prompt state (Section 3.5): a local review_state.json record
   of session counts, usage dates and prompt outcomes, retained until
-  you delete the %LOCALAPPDATA%\Whisperstream\ directory. It is
-  never transmitted.
+  you delete the application data directory. It is never
+  transmitted.
 
 Third-party retention: processor-held and independently controlled
 records:
@@ -1373,11 +1403,11 @@ as an explicit companion to Section 3, so that you can see not just
 what the Software does, but also what it does not do.
 
 - No audio recordings leave your device. Microphone audio is
-  processed by the speech recognition model on your CPU and is never
-  uploaded to any server for any reason. If you keep audio saving
-  enabled in the local transcript history (Section 3.4), a copy of
-  the recording is stored encrypted on your own device only; it
-  still never leaves your device.
+  processed by the speech recognition model on your device and is
+  never uploaded to any server for any reason. If you keep audio
+  saving enabled in the local transcript history (Section 3.4), a
+  copy of the recording is stored encrypted on your own device only;
+  it still never leaves your device.
 - By default, no transcribed text leaves your device. In the default
   configuration of the Software, the output of the speech
   recognition model is typed into the focused window, and the
@@ -1663,45 +1693,51 @@ cloud cleanup. In particular:
   cryptographic checksums before installation.
 - The local backend process binds exclusively to 127.0.0.1 on a
   local port, so that no other device on your network can reach it.
-- Local configuration, logs, and usage statistics are stored under
-  your Windows user profile with the access controls your operating
-  system provides.
+- Local configuration, logs, and usage statistics are stored in the
+  application data directory of your user account with the access
+  controls your operating system provides.
 - The local transcript history described in Section 3.4 separately
   encrypts the raw transcript, enhanced transcript, waveform peaks,
   and, if enabled, audio using AES-256-GCM. The AES data key is
-  itself sealed using Windows user-scoped DPAPI. Windows normally
-  limits decryption to the protecting user's credentials on that
-  computer; a roaming profile can permit decryption on another
-  computer. This protection does not isolate the key from processes
-  acting with that user's authority. Lightweight index metadata
-  needed for lookup and playback remains unencrypted. Existing
-  plaintext waveform peaks from an older database schema are
-  transactionally migrated to separately authenticated ciphertext
-  when the data key is available; if the history is locked,
-  migration is deferred and retried after unlock. The replacement of
-  a legacy database value uses ordinary SQLite updating and is not
-  represented as secure erasure of storage remnants.
+  itself sealed using Windows user-scoped DPAPI or stored in the
+  macOS login Keychain. Windows normally limits decryption to the
+  protecting user's credentials on that computer; a roaming profile
+  can permit decryption on another computer. The macOS Keychain item
+  is not set to synchronize through iCloud Keychain. Neither
+  protection isolates the key from processes acting with that user's
+  authority. Lightweight index metadata needed for lookup and
+  playback remains unencrypted. Existing plaintext waveform peaks
+  from an older database schema are transactionally migrated to
+  separately authenticated ciphertext when the data key is
+  available; if the history is locked, migration is deferred and
+  retried after unlock. The replacement of a legacy database value
+  uses ordinary SQLite updating and is not represented as secure
+  erasure of storage remnants.
 - When Lockdown Mode (Section 3.6) is on, the Software adds a
   password layer to the transcript history. A key derived from a
   password you choose (using the scrypt key-derivation function) and
   a separate key derived from a one-time recovery code each wrap the
-  transcript encryption key using AES-256-GCM, on top of the at-rest
-  encryption and Windows Data Protection API sealing described
-  above. The transcript history locks automatically after an idle
-  period you set, and repeated failed unlock attempts trigger
-  escalating delays. Lanreal never receives your password or your
-  recovery code.
+  transcript encryption key using AES-256-GCM, in place of the
+  operating-system key protection described above, while the
+  transcript content remains encrypted at rest as described above.
+  The transcript history locks automatically after an idle period
+  you set, and repeated failed unlock attempts trigger escalating
+  delays. Lanreal never receives your password or your recovery
+  code.
 - For the optional cloud post-processing feature described in
-  Section 6, credentials (API keys) that you supply are encrypted at
-  rest using Windows user-scoped DPAPI (CryptProtectData). Windows
-  normally limits decryption to the protecting user's credentials on
-  that computer; a roaming profile can permit decryption on another
-  computer. This does not isolate credentials from processes acting
-  with that user's authority. The encrypted credential is stored
-  under %LOCALAPPDATA%\Whisperstream\ with the access controls your
-  operating system provides, and is not part of the bug-report log
-  export described in Section 8, so it is not inadvertently
-  transmitted when you submit a bug report to Lanreal.
+  Section 6, credentials (API keys) that you supply are protected at
+  rest. On Windows they are encrypted using user-scoped DPAPI
+  (CryptProtectData) and stored under %LOCALAPPDATA%\Whisperstream\.
+  Windows normally limits decryption to the protecting user's
+  credentials on that computer; a roaming profile can permit
+  decryption on another computer. On macOS they are stored in your
+  login Keychain and are not set to synchronize through iCloud
+  Keychain. Neither protection isolates credentials from processes
+  acting with that user's authority. The protected credential has
+  the access controls your operating system provides, and is not
+  part of the bug-report log export described in Section 8, so it is
+  not inadvertently transmitted when you submit a bug report to
+  Lanreal.
 - When the optional cloud post-processing feature is enabled, each
   request to the provider you selected travels over HTTPS with
   certificate verification enabled. Your credential is transmitted
