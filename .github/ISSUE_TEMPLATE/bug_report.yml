@@ -64,8 +64,19 @@ body:
       label: What happened instead
     validations:
       required: true
+  - type: dropdown
+    id: logs_shared
+    attributes:
+      label: Logs
+      description: Logs are usually the only way I can tell what went wrong. In Whisperstream, go to About > Export logs to save a ZIP on your computer. The app never uploads it.
+      options:
+        - I attached the ZIP below
+        - I emailed it to support@whisperstream.io with the issue link
+        - I can't share logs
+    validations:
+      required: true
   - type: textarea
     id: diagnostics
     attributes:
-      label: Logs or screenshots
-      description: Optional. About > Export logs saves a ZIP on your computer; the app never uploads it. Review it before attaching, and remove anything sensitive from screenshots. GitHub uploads an attached file straight away, even before you submit.
+      label: Log ZIP and screenshots
+      description: Drag the ZIP here, plus any screenshots. Review them first, since attachments are public. GitHub uploads an attached file straight away, even before you submit.
