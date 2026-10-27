@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { About } from "./About";
 import type { DailyUseCapabilityReport } from "../lib/dailyUseCapabilities";
@@ -85,7 +85,7 @@ describe("About feature request action", () => {
 
   it("uses GitHub help and offers no update action without the official updater", async () => {
     render(<About capabilities={CAPABILITIES} />);
-    expect(await screen.findByRole("button", { name: "Report a bug on GitHub, opens in your browser" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Report a bug" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Read documentation, opens in your browser" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /check for updates/i })).toBeNull();
     expect(screen.queryByText("Updates unavailable")).toBeNull();
@@ -120,7 +120,7 @@ describe("About log privacy copy", () => {
     render(<About capabilities={CAPABILITIES} />);
 
     expect(screen.queryByText(/Review logs before sharing/)).not.toBeInTheDocument();
-    await screen.findByRole("button", {name:"Report a bug on GitHub, opens in your browser"});
+    await screen.findByRole("button", {name:"Report a bug"});
     expect(screen.queryByText(/In Lockdown/i)).not.toBeInTheDocument();
 
   });
@@ -129,18 +129,18 @@ describe("About log privacy copy", () => {
 
 it("does not open a browser after Lockdown becomes active", async () => {
   render(<About capabilities={CAPABILITIES} />);
-  const button = await screen.findByRole("button", {name:"Report a bug on GitHub, opens in your browser"});
+  fireEvent.click(await screen.findByRole("button", {name:"Report a bug"}));
   mocks.lockdown.mockResolvedValue({enabled:true,managed:true});
-  fireEvent.click(button);
+  fireEvent.click(screen.getByRole("button", {name:"Continue without logs"}));
   await waitFor(() => expect(mocks.lockdown).toHaveBeenCalledTimes(2));
   expect(mocks.open).not.toHaveBeenCalled();
 });
 
 it("reacts to current Lockdown state without showing external actions", async () => {
   const view = render(<About lockdownEnabled={false} />);
-  await screen.findByRole("button", {name:"Report a bug on GitHub, opens in your browser"});
+  await screen.findByRole("button", {name:"Report a bug"});
   view.rerender(<About lockdownEnabled={true} />);
-  expect(screen.queryByRole("button", {name:"Report a bug on GitHub, opens in your browser"})).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", {name:"Report a bug"})).not.toBeInTheDocument();
   expect(screen.getByText("External links are unavailable in Lockdown Mode.")).toBeInTheDocument();
 });
 
@@ -162,7 +162,7 @@ it.each([{enabled: false}, {enabled: false, managed: true}, {enabled: true, mana
     mocks.lockdown.mockResolvedValue(status);
     render(<About capabilities={CAPABILITIES} />);
     await waitFor(() => expect(mocks.lockdown).toHaveBeenCalled());
-    expect(screen.queryByRole("button", {name: "Report a bug on GitHub, opens in your browser"})).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", {name: "Report a bug"})).not.toBeInTheDocument();
     expect(screen.queryByRole("button", {name: /Request a feature/})).not.toBeInTheDocument();
     expect(screen.getByRole("button", {name: "Export logs"})).toBeInTheDocument();
     expect(screen.getByRole("button", {name: "Save documentation"})).toBeInTheDocument();
@@ -179,9 +179,9 @@ it("shows a retryable failure when opening a link fails", async () => {
 
 it("refuses a handoff when the current policy cannot be read", async () => {
   render(<About capabilities={CAPABILITIES} />);
-  const button = await screen.findByRole("button", {name: "Report a bug on GitHub, opens in your browser"});
+  fireEvent.click(await screen.findByRole("button", {name: "Report a bug"}));
   mocks.lockdown.mockRejectedValueOnce(new Error("offline"));
-  fireEvent.click(button);
+  fireEvent.click(screen.getByRole("button", {name: "Continue without logs"}));
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(mocks.open).not.toHaveBeenCalled();
 });
@@ -196,7 +196,6 @@ it("shows real log export failures without reporting success", async () => {
 
 
 it.each([
-  ["Report a bug on GitHub, opens in your browser", "https://github.com/lanreal-io/whisperstream/issues/new?template=bug_report.yml"],
   ["Read documentation, opens in your browser", "https://whisperstream.io/docs"],
   ["Source code, opens in your browser", "https://github.com/lanreal-io/whisperstream"],
 ])("opens only the fixed destination for %s", async (name,url) => {
@@ -224,4 +223,51 @@ it("refuses a feature request when fresh policy cannot be read", async () => {
   fireEvent.click(button);
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(mocks.open).not.toHaveBeenCalled();
+});
+
+
+describe("Report a bug asks for logs first", () => {
+  it("opens the logs dialog instead of a browser", async () => {
+    render(<About capabilities={CAPABILITIES} />);
+    fireEvent.click(await screen.findByRole("button", {name: "Report a bug"}));
+
+    expect(screen.getByRole("dialog", {name: "Include your logs"})).toBeInTheDocument();
+    expect(mocks.open).not.toHaveBeenCalled();
+    expect(mocks.exportLogs).not.toHaveBeenCalled();
+  });
+
+  it("continues without logs to the fixed bug report form and closes", async () => {
+    mocks.open.mockResolvedValue(undefined);
+    render(<About capabilities={CAPABILITIES} />);
+    fireEvent.click(await screen.findByRole("button", {name: "Report a bug"}));
+    fireEvent.click(screen.getByRole("button", {name: "Continue without logs"}));
+
+    await waitFor(() => expect(mocks.open).toHaveBeenCalledWith(
+      "https://github.com/lanreal-io/whisperstream/issues/new?template=bug_report.yml",
+    ));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("exports logs, then continues to GitHub Issues or email", async () => {
+    mocks.open.mockResolvedValue(undefined);
+    render(<About capabilities={CAPABILITIES} />);
+    fireEvent.click(await screen.findByRole("button", {name: "Report a bug"}));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", {name: "Export logs"}));
+
+    fireEvent.click(await screen.findByRole("button", {name: "Email logs instead"}));
+    await waitFor(() => expect(mocks.open).toHaveBeenCalledWith(
+      "mailto:support@whisperstream.io?subject=Whisperstream%20bug%20report",
+    ));
+    expect(mocks.exportLogs).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes on Escape without opening anything", async () => {
+    render(<About capabilities={CAPABILITIES} />);
+    fireEvent.click(await screen.findByRole("button", {name: "Report a bug"}));
+    fireEvent.keyDown(window, {key: "Escape"});
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(mocks.open).not.toHaveBeenCalled();
+  });
 });

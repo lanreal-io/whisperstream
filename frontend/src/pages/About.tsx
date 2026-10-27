@@ -7,6 +7,7 @@ import { exportLogs } from "../lib/api/diagnostics";
 import { getVersion } from "../lib/api/system";
 import { getLockdownStatus } from "../lib/api/lockdown";
 import { DocumentationExportButton } from "../components/DocumentationExportButton";
+import { ReportBugDialog } from "../components/ReportBugDialog";
 import { downloadLegalDocument, LEGAL_DOCUMENTS } from "../lib/legalDocuments";
 import { errorType } from "../lib/logCapture";
 import type { DailyUseCapabilityReport } from "../lib/dailyUseCapabilities";
@@ -15,6 +16,9 @@ import { officialUpdater, type OfficialUpdateOffer } from "../lib/officialUpdate
 const spring = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 type DiagState = "idle" | "exporting" | "success" | "denied" | "error";
+
+const BUG_REPORT_URL = "https://github.com/lanreal-io/whisperstream/issues/new?template=bug_report.yml";
+const BUG_REPORT_EMAIL = "mailto:support@whisperstream.io?subject=Whisperstream%20bug%20report";
 
 const FOOTER_LINKS = [
   { label: "Changelog", url: "https://whisperstream.io/changelog" },
@@ -72,6 +76,7 @@ interface AboutProps {
 export function About({ onUpdateAvailable, lockdownEnabled, capabilities }: AboutProps = {}) {
   const [lockdown, setLockdown] = useState<boolean | null>(null);
   const [helpError, setHelpError] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
   const [legalError, setLegalError] = useState(false);
   const effectiveLockdown = lockdownEnabled === true || lockdown === true
     ? true : lockdown === false ? false : null;
@@ -102,6 +107,13 @@ export function About({ onUpdateAvailable, lockdownEnabled, capabilities }: Abou
       setHelpError("Could not open the link. Try again.");
     }
   }, []);
+
+  // Report a bug asks for logs first; each destination still passes the
+  // fresh external-access check above.
+  const handleReportHandoff = useCallback(async (url: string) => {
+    await withExternalAccess(() => open(url));
+    setReportOpen(false);
+  }, [withExternalAccess]);
 
   const [version, setVersion] = useState<string | null>(null);
   const [logState, setLogState] = useState<DiagState>("idle");
@@ -204,8 +216,8 @@ export function About({ onUpdateAvailable, lockdownEnabled, capabilities }: Abou
             >
               <PrimaryButton
                 type="button"
-                aria-label="Report a bug on GitHub, opens in your browser"
-                onClick={() => void withExternalAccess(() => open("https://github.com/lanreal-io/whisperstream/issues/new?template=bug_report.yml"))}
+                aria-haspopup="dialog"
+                onClick={() => setReportOpen(true)}
                 fullWidth
                 className="flex items-center justify-center gap-2 h-11 text-[13px]"
               >
@@ -306,6 +318,12 @@ export function About({ onUpdateAvailable, lockdownEnabled, capabilities }: Abou
 
       {helpError && <p role="alert" className="text-[12px] text-rose text-center mt-2">{helpError}</p>}
       {legalError && <p role="alert" className="text-[12px] text-rose text-center mt-2">Could not download the document. Please try again.</p>}
+      <ReportBugDialog
+        open={reportOpen}
+        onOpenIssues={() => void handleReportHandoff(BUG_REPORT_URL)}
+        onEmail={() => void handleReportHandoff(BUG_REPORT_EMAIL)}
+        onClose={() => setReportOpen(false)}
+      />
     </div>
   );
 }
