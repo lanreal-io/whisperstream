@@ -3800,7 +3800,9 @@ class WhisperstreamServer:
             return record
 
         @api.get("/api/devices")
-        async def get_devices():
+        def get_devices():
+            if getattr(getattr(self._app, "audio_capture", None), "capture_available", True) is False:
+                return JSONResponse(status_code=503, content={"error": "audio_device_inventory_unavailable"})
             try:
                 from ..capture import list_input_devices  # noqa: PLC0415
 

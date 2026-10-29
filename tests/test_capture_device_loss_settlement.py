@@ -608,6 +608,127 @@ def test_cleanup_retries_once_then_reports_persistent_capture_ownership() -> Non
     )
 
 
+def test_shutdown_claim_fences_timer_hotkeys_compose_and_replacement():
+    app, capture, event, events, queued, running, stop_timer, idle_timer = _make_app()
+    entered, release = threading.Event(), threading.Event()
+    app._require_acceptance = lambda *a: True
+    app._current_acceptance_grant = lambda: object()
+    app._agent_compose_leases = MagicMock()
+    app._agent_compose_leases.is_current.return_value = True
+    app._stop_routed_reply = lambda *a: False
+    app._start_routed_reply = lambda *a: False
+    app.config = SimpleNamespace(audio_input_device="changed")
+    native_stops = MagicMock(side_effect=AssertionError("native stop overlaps close"))
+    capture.stop = native_stops
+
+    def close():
+        capture.close_calls += 1
+        assert app._recording is False and app._discarding_recording
+        assert app._active_capture_session_key is None
+        assert app._recording_acceptance_grant is None
+        assert queued.cancel.called and running.cancel.called
+        entered.set()
+        assert release.wait(5)
+        return True
+
+    capture.close = close
+    shutdown = threading.Thread(target=app.cleanup)
+    shutdown.start()
+    try:
+        assert entered.wait(2)
+        # Cleanup must not retain the recording lock during native close.
+        assert app._lock.acquire(timeout=1)
+        app._lock.release()
+        app._handle_timeout(11)
+        app._on_hotkey_release()
+        app._on_hotkey_press()
+        app._on_toggle_start()
+        app._stop_ordinary_toggle()
+        assert app.start_agent_compose(1) is False
+        assert app.stop_agent_compose(1) is False
+        assert app.cancel_agent_compose(1, reason="cancel") is False
+        with app._lock:
+            assert app._ensure_audio_capture_selection_locked() is False
+            app._cancel_recording()
+            app._stop_recording()
+        app._settle_capture_terminal_event(event)
+        native_stops.assert_not_called()
+        assert capture.cancel_calls == 0 and capture.close_calls == 1
+        stop_timer.cancel.assert_called_once()
+        idle_timer.cancel.assert_called_once()
+    finally:
+        release.set()
+        shutdown.join(3)
+    assert not shutdown.is_alive()
+
+
+@pytest.mark.parametrize("close_error", [False, True])
+def test_real_windows_stop_failure_settles_app_without_final_consumers(monkeypatch, close_error):
+    from whisperstream.audio_capture import AudioCapture
+    from whisperstream.capture_contract import CaptureRequest
+    from tests.test_windows_capture_native_lifetime import Native
+    import sounddevice as sd
+    lib = Native()
+    params = sd._ffi.new("PaStreamParameters *")
+    monkeypatch.setattr(sd, "_lib", lib)
+    monkeypatch.setattr(sd, "_get_stream_parameters", lambda *a, **kw: (params, "float32", 4, 16000))
+    adapter = AudioCapture()
+    monkeypatch.setattr(adapter, "_resolve_request", lambda *a:
+                        (None, "default", CaptureSelectionResolution.SYSTEM_DEFAULT, "fake"))
+    adapter.start_capture(CaptureRequest("integrated", 1))
+    app, _, _, events, queued, running, *_ = _make_app()
+    app.audio_capture = adapter
+    app._acceptance_is_current = lambda *a: True
+    app._freeze_live_preview = MagicMock()
+    app._executor = MagicMock()
+    lib.stop_error, lib.close_error = -9986, close_error
+    with app._lock:
+        app._stop_recording()
+    assert not app._recording
+    assert app._recording_acceptance_grant is None and app._chunk_futures == []
+    assert app._last_waveform is None
+    assert queued.cancel.called and running.cancel.called
+    assert events.count("idle-publish") == 1
+    app._executor.submit.assert_not_called()
+    app.text_injector.inject.assert_not_called()
+    assert lib.closes == 1
+    assert adapter.capture_available is not close_error
+    assert app._dispatch_error_dialog.call_args.kwargs["retry_action"] == (None if close_error else "restart_capture")
+    # A late worker callback after the discard flag is reset is still inert.
+    import numpy as np
+    app._on_chunk_ready(np.ones(4, dtype=np.float32))
+    app._executor.submit.assert_not_called()
+
+
+@pytest.mark.parametrize("entry", ["hotkey", "compose"])
+def test_admission_that_passed_early_check_rechecks_shutdown_under_lock(entry):
+    app, capture, *_ = _make_app()
+    app._recording = False
+    app._current_acceptance_grant = lambda: object()
+    app._require_acceptance = lambda *a: True
+    app.initialize_accepted_content_services = MagicMock()
+    entered, release = threading.Event(), threading.Event()
+    def delayed(*a):
+        entered.set()
+        assert release.wait(3)
+        return entry == "compose"
+    app._start_routed_reply = delayed
+    app._agent_compose_leases = SimpleNamespace(is_current=delayed)
+    app._try_begin_recording = MagicMock(side_effect=AssertionError("late start"))
+    call = app._on_hotkey_press if entry == "hotkey" else lambda: app.start_agent_compose(1)
+    thread = threading.Thread(target=call)
+    thread.start()
+    try:
+        assert entered.wait(2)
+        app.cleanup()
+    finally:
+        release.set()
+        thread.join(3)
+    assert not thread.is_alive()
+    app._try_begin_recording.assert_not_called()
+    assert capture.close_calls == 1
+
+
 def test_terminal_event_rejects_invalid_generation_and_failure() -> None:
     with pytest.raises(ValueError, match="generation"):
         CaptureTerminalEvent("capture", 0, CaptureFailure.DEVICE_LOST, 1)

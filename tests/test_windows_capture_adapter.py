@@ -109,11 +109,11 @@ class FakeStream:
             raise OSError("synthetic open failure")
         self.started = True
 
-    def stop(self) -> None:
+    def stop(self, *, ignore_errors=True) -> None:
         self.stopped = True
         self.finished_callback()
 
-    def close(self) -> None:
+    def close(self, *, ignore_errors=True) -> None:
         self.closed = True
 
 
@@ -141,12 +141,12 @@ def native_devices(monkeypatch):
 def streams(monkeypatch, native_devices):
     created: list[FakeStream] = []
 
-    def _input_stream(**kwargs):
+    def _input_stream(*, owner, **kwargs):
         stream = FakeStream(kwargs)
         created.append(stream)
         return stream
 
-    monkeypatch.setattr(capture_module.sd, "InputStream", _input_stream)
+    monkeypatch.setattr(capture_module, "_OwnedInputStream", _input_stream)
     return created
 
 
@@ -155,6 +155,59 @@ def _start(adapter: WindowsCaptureAdapter, request: CaptureRequest | None = None
     assert outcome.failure is None
     assert outcome.session is not None
     return outcome.session
+
+
+@pytest.mark.parametrize("notification", ["status", "level", "preview"])
+def test_optional_notification_failure_preserves_audio(streams, notification):
+    def fail(*args):
+        raise RuntimeError("synthetic notification failure")
+    adapter = AudioCapture(status_callback=fail if notification == "status" else None)
+    if notification == "preview":
+        adapter.set_preview_callback(fail, max_duration=1)
+    outcome = adapter.start_capture(CaptureRequest("notification", 1),
+                                    on_level=fail if notification == "level" else None)
+    streams[0].callback(np.ones((4, 1), dtype=np.float32), 4, None, "overflow")
+    result = adapter.stop_capture(outcome.session)
+    assert result.status is CaptureCompletionStatus.STOPPED
+    np.testing.assert_array_equal(result.audio, np.ones(4))
+
+
+@pytest.mark.parametrize("operation", ["stop_capture", "cancel_capture"])
+def test_failure_during_native_stop_is_not_lost(streams, operation):
+    adapter = AudioCapture()
+    session = _start(adapter)
+    def stop(**kwargs):
+        adapter._record_failure(CaptureFailure.STREAM_FAILED)
+    streams[0].stop = stop
+    result = getattr(adapter, operation)(session)
+    assert result.status is CaptureCompletionStatus.FAILED
+    assert result.failure is CaptureFailure.STREAM_FAILED
+    assert result.audio is None
+
+
+def test_failed_worker_drain_cannot_become_success_on_retry(streams, monkeypatch):
+    adapter = AudioCapture()
+    session = _start(adapter)
+    monkeypatch.setattr(adapter, "_stop_chunk_worker", lambda **kwargs: False)
+    assert adapter.stop_capture(session).failure is CaptureFailure.TIMEOUT
+    monkeypatch.setattr(adapter, "_stop_chunk_worker", lambda **kwargs: True)
+    result = adapter.stop_capture(session)
+    assert result.status is CaptureCompletionStatus.FAILED
+    assert result.failure is CaptureFailure.TIMEOUT
+    assert adapter.close() is True
+
+
+@pytest.mark.parametrize("duration", [1.0, 4 / CAPTURE_SAMPLE_RATE])
+def test_authoritative_chunk_consumer_failure_is_not_success(streams, duration):
+    def fail(_chunk):
+        raise RuntimeError("synthetic chunk admission failure")
+    adapter = AudioCapture(chunk_duration=duration, chunk_overlap=0)
+    session = adapter.start_capture(CaptureRequest("chunks", 1), on_chunk=fail).session
+    streams[0].callback(np.ones((8, 1), dtype=np.float32), 8, None, None)
+    result = adapter.stop_capture(session)
+    assert result.status is CaptureCompletionStatus.FAILED
+    assert result.failure is CaptureFailure.STREAM_FAILED and result.audio is None
+    assert adapter.close() is True
 
 
 def test_device_contract_adapter_runtime_and_parent_import_isolation(streams) -> None:
@@ -258,12 +311,12 @@ def test_selected_open_failure_closes_first_stream_then_falls_back(
 ) -> None:
     created: list[FakeStream] = []
 
-    def _input_stream(**kwargs):
+    def _input_stream(*, owner, **kwargs):
         stream = FakeStream(kwargs, fail_start=kwargs["device"] == 1)
         created.append(stream)
         return stream
 
-    monkeypatch.setattr(capture_module.sd, "InputStream", _input_stream)
+    monkeypatch.setattr(capture_module, "_OwnedInputStream", _input_stream)
     adapter = AudioCapture(device="Bluetooth headset microphone")
     session = _start(
         adapter,
@@ -289,12 +342,12 @@ def test_backend_open_failure_is_typed_and_closes_partial_stream(
 ) -> None:
     created: list[FakeStream] = []
 
-    def _input_stream(**kwargs):
+    def _input_stream(*, owner, **kwargs):
         stream = FakeStream(kwargs, fail_start=True)
         created.append(stream)
         return stream
 
-    monkeypatch.setattr(capture_module.sd, "InputStream", _input_stream)
+    monkeypatch.setattr(capture_module, "_OwnedInputStream", _input_stream)
     outcome = AudioCapture().start_capture(CaptureRequest("open-failure", 6))
     assert outcome.failure is CaptureFailure.OPEN_FAILED
     assert outcome.session is None
@@ -308,19 +361,19 @@ def test_open_failure_retains_unclean_stream_and_blocks_next_start(
     created: list[FakeStream] = []
     close_attempts = 0
 
-    def _input_stream(**kwargs):
+    def _input_stream(*, owner, **kwargs):
         stream = FakeStream(kwargs, fail_start=True)
         created.append(stream)
         return stream
 
-    def _persistent_close(stream: FakeStream) -> None:
+    def _persistent_close(stream: FakeStream, **kwargs) -> None:
         nonlocal close_attempts
         close_attempts += 1
         if close_attempts < 3:
             raise OSError("synthetic persistent close failure")
         stream.closed = True
 
-    monkeypatch.setattr(capture_module.sd, "InputStream", _input_stream)
+    monkeypatch.setattr(capture_module, "_OwnedInputStream", _input_stream)
     monkeypatch.setattr(FakeStream, "close", _persistent_close)
     adapter = AudioCapture()
 
@@ -336,9 +389,10 @@ def test_open_failure_retains_unclean_stream_and_blocks_next_start(
         adapter.start()
     assert adapter.active_session is retained
     assert len(created) == 1
-    assert adapter.close() is True
-    assert adapter.active_session is None
-    assert not adapter.stream_open
+    assert adapter.close() is False
+    assert close_attempts == 1
+    assert adapter.active_session is retained
+    assert not adapter.capture_available
 
 
 def test_no_input_device_is_explicit_without_open_attempt(monkeypatch) -> None:
@@ -348,7 +402,7 @@ def test_no_input_device_is_explicit_without_open_attempt(monkeypatch) -> None:
         lambda *, display_only: [],
     )
     open_stream = MagicMock()
-    monkeypatch.setattr(capture_module.sd, "InputStream", open_stream)
+    monkeypatch.setattr(capture_module, "_OwnedInputStream", open_stream)
     outcome = AudioCapture().start_capture(CaptureRequest("no-input", 12))
     assert outcome.failure is CaptureFailure.NO_INPUT_DEVICE
     assert outcome.session is None
@@ -446,14 +500,14 @@ def test_retired_stream_callbacks_cannot_affect_next_recording(streams) -> None:
     np.testing.assert_array_equal(completion.audio, np.full(4, 2.0, dtype=np.float32))
 
 
-def test_device_loss_close_failure_is_authoritative_and_retryable(streams) -> None:
+def test_device_loss_close_failure_is_authoritative_and_not_retryable(streams) -> None:
     adapter = AudioCapture()
     session = _start(adapter, CaptureRequest("loss-close-failure", 14))
     stream = streams[0]
     stream.finished_callback()
     attempts = 0
 
-    def flaky_close() -> None:
+    def flaky_close(**kwargs) -> None:
         nonlocal attempts
         attempts += 1
         if attempts < 3:
@@ -474,10 +528,11 @@ def test_device_loss_close_failure_is_authoritative_and_retryable(streams) -> No
     with pytest.raises(capture_module.AudioCaptureError):
         adapter.start()
     assert len(streams) == created_before
-    assert adapter.close() is True
-    assert attempts == 3
-    assert adapter.active_session is None
-    assert not adapter.stream_open
+    assert adapter.close() is False
+    assert attempts == 1
+    assert adapter.active_session is session
+    assert adapter.stream_open
+    assert not adapter.capture_available
 
 
 def test_device_loss_worker_timeout_is_authoritative_and_retryable(
@@ -540,6 +595,10 @@ def test_callback_backend_failure_is_explicit_and_stream_closes(streams) -> None
         status_callback=_status_failure, terminal_callback=terminal_events.append
     )
     session = _start(adapter, CaptureRequest("callback-failure", 10))
+    class BrokenFrames(list):
+        def append(self, value):
+            raise RuntimeError("synthetic storage failure")
+    adapter._frames = BrokenFrames()
     with pytest.raises(capture_module.sd.CallbackAbort):
         streams[0].callback(
             np.zeros((4, 1), dtype=np.float32),
@@ -567,7 +626,7 @@ def test_stop_failure_still_closes_stream_and_reports_cleanup(streams) -> None:
     adapter = AudioCapture()
     session = _start(adapter, CaptureRequest("stop-failure", 13))
 
-    def _stop_failure() -> None:
+    def _stop_failure(**kwargs) -> None:
         raise OSError("synthetic stop failure")
 
     streams[0].stop = _stop_failure

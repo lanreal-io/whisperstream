@@ -1150,6 +1150,7 @@ def test_restore_preserves_preexisting_mute_state(_make_app) -> None:
 
 def test_chunk_ready_submits_to_executor(_make_app) -> None:
     app = _make_app()
+    app._recording = True
     original_submit = app._executor.submit
     submitted_calls = []
 
