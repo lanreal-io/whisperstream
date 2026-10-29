@@ -31,7 +31,7 @@ class TestAudioCaptureChunking(unittest.TestCase):
     def tearDown(self) -> None:
         self._device_query_patch.stop()
 
-    @patch("whisperstream.audio_capture.sd.InputStream")
+    @patch("whisperstream.audio_capture._OwnedInputStream")
     def test_initial_discard_gate_excludes_all_consumers_until_armed(
         self, mock_input_stream_cls
     ):
@@ -79,7 +79,7 @@ class TestAudioCaptureChunking(unittest.TestCase):
         self.assertEqual(len(chunks), 1)
         np.testing.assert_array_equal(chunks[0], app_audio.reshape(-1))
 
-    @patch("whisperstream.audio_capture.sd.InputStream")
+    @patch("whisperstream.audio_capture._OwnedInputStream")
     def test_chunking_emits_expected_chunks_and_tail(self, mock_input_stream_cls):
         """Feed 500 synthetic samples (sample_rate=16000, chunk_duration=.0125,
         overlap=.00125) and verify the callback receives the expected number of
@@ -183,7 +183,7 @@ class TestAudioCaptureChunking(unittest.TestCase):
         )
         self.assertEqual(total_unique, 500)
 
-    @patch("whisperstream.audio_capture.sd.InputStream")
+    @patch("whisperstream.audio_capture._OwnedInputStream")
     def test_chunking_disabled_no_callback_invoked(self, mock_input_stream_cls):
         """With chunk_duration=0, chunk_callback is never called and stop()
         returns the full buffer as before.
@@ -233,7 +233,7 @@ class TestAudioCaptureChunking(unittest.TestCase):
         # Full waveform still returned.
         self.assertEqual(len(full_waveform), 500)
 
-    @patch("whisperstream.audio_capture.sd.InputStream")
+    @patch("whisperstream.audio_capture._OwnedInputStream")
     def test_chunking_enabled_no_callback_no_errors(self, mock_input_stream_cls):
         """Chunking enabled but no chunk_callback provided — no errors,
         accumulate into _frames and return full buffer from stop().
@@ -272,7 +272,7 @@ class TestAudioCaptureChunking(unittest.TestCase):
         # Full waveform returned as usual.
         self.assertEqual(len(full_waveform), 500)
 
-    @patch("whisperstream.audio_capture.sd.InputStream")
+    @patch("whisperstream.audio_capture._OwnedInputStream")
     def test_preview_ring_is_bounded_without_changing_authoritative_audio(
         self, mock_input_stream_cls
     ):
@@ -338,7 +338,7 @@ class TestAudioCaptureChunking(unittest.TestCase):
         np.testing.assert_array_equal(chunks[1], np.arange(180, 380, dtype=np.float32))
         np.testing.assert_array_equal(chunks[2], np.arange(360, 500, dtype=np.float32))
 
-    @patch("whisperstream.audio_capture.sd.InputStream")
+    @patch("whisperstream.audio_capture._OwnedInputStream")
     def test_disabled_preview_allocates_no_ring_or_notifications(
         self, mock_input_stream_cls
     ):

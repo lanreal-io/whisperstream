@@ -124,9 +124,9 @@ const DEV_COPY: Record<string, ErrorEmitPayload> = {
   },
 };
 
-export function ErrorPopup() {
+export function ErrorPopup({ initialPayload }: { initialPayload?: ErrorEmitPayload } = {}) {
   const devCodePayload = import.meta.env.DEV
-    ? DEV_COPY[new URLSearchParams(window.location.search).get("devCode") ?? ""] ?? null
+    ? initialPayload ?? DEV_COPY[new URLSearchParams(window.location.search).get("devCode") ?? ""] ?? null
     : null;
 
   const [payload, setPayload] = useState<ErrorEmitPayload | null>(devCodePayload);

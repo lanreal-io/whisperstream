@@ -1303,6 +1303,8 @@ class WhisperstreamApp:
 
     def start_agent_compose(self, generation: int) -> bool:
         """Start one lease-owned recording without stealing an active capture."""
+        if getattr(self, "_shutting_down", False):
+            return False
         grant = self._current_acceptance_grant()
         if not self._require_acceptance(grant):
             return False
@@ -1311,6 +1313,8 @@ class WhisperstreamApp:
         if leases is None or not leases.is_current(generation):
             return False
         with self._lock:
+            if getattr(self, "_shutting_down", False):
+                return False
             if self._recording:
                 return False
             self._recording_acceptance_grant = grant
@@ -1345,6 +1349,8 @@ class WhisperstreamApp:
     def stop_agent_compose(self, generation: int) -> bool:
         """Stop capture normally so its authoritative final can become a draft."""
         with self._lock:
+            if getattr(self, "_shutting_down", False):
+                return False
             lease = getattr(self, "_agent_compose_recording", None)
             if (
                 not self._recording
@@ -1352,7 +1358,7 @@ class WhisperstreamApp:
                 or lease.generation != generation
             ):
                 return False
-            self._restore_system_volume()
+            self._attempt_restore_system_volume()
             self._stop_recording()
             return True
 
@@ -1360,27 +1366,13 @@ class WhisperstreamApp:
         """Cancel only the matching compose capture, never ordinary dictation."""
         try:
             with self._lock:
+                if getattr(self, "_shutting_down", False):
+                    return False
                 lease = getattr(self, "_agent_compose_recording", None)
                 if lease is None or lease.generation != generation:
                     return False
                 if self._recording:
-                    if self._stop_timer:
-                        self._stop_timer.cancel()
-                        self._stop_timer = None
-                    self._restore_system_volume()
-                    self._invalidate_live_preview()
-                    self.audio_capture.set_level_callback(None)
-                    self.audio_capture.stop()
-                    self._recording = False
-                    if lease.recording_id is not None:
-                        self._transition_dictation_state(
-                            lease.recording_id, "idle"
-                        )
-                    self._broadcast(
-                        {"type": "state.recording", "recording": False}
-                    )
-                    self._play_recording_chime(ChimeKind.STOP)
-                    self._close_audio_policy()
+                    self._cancel_recording(trigger=reason)
                 self._agent_compose_recording = None
                 self._last_waveform = None
                 return True
@@ -2309,9 +2301,35 @@ class WhisperstreamApp:
             mode = AudioPolicyMode(self.config.system_volume_mode)
         except ValueError:
             mode = AudioPolicyMode.OFF
-        transaction, result = policy.begin(generation, mode)
-        self._audio_policy_transaction = transaction
-        self._audio_policy_result("begin", result)
+        try:
+            transaction, result = policy.begin(generation, mode)
+            self._audio_policy_transaction = transaction
+            self._audio_policy_result("begin", result)
+        except Exception as exc:
+            self.logger.warning("audio policy begin failed reason=%s", type(exc).__name__)
+
+    def _attempt_restore_system_volume(self) -> None:
+        try:
+            self._restore_system_volume()
+        except Exception as exc:
+            self.logger.warning("volume restore failed reason=%s", type(exc).__name__)
+
+    def _capture_cleanup_retryable(self) -> bool:
+        capture = getattr(self, "audio_capture", None)
+        if getattr(capture, "terminal_operations_owned", False) is True:
+            return False
+        return getattr(capture, "cleanup_retryable", True) is not False
+
+    def _capture_unavailable(self) -> bool:
+        return getattr(getattr(self, "audio_capture", None), "capture_available", True) is False
+
+    def _report_capture_failure(self) -> None:
+        unavailable = self._capture_unavailable()
+        copy = COPY["audio_capture_unavailable" if unavailable else "audio_capture_failed"]
+        self._dispatch_error_dialog(
+            "audio_capture_failed", copy["title"], copy["message"],
+            retry_action=None if unavailable else "restart_capture",
+        )
 
     def _restore_system_volume(self) -> None:
         """Restore the exact captured endpoint before microphone close."""
@@ -2328,7 +2346,11 @@ class WhisperstreamApp:
         generation = int(getattr(self, "_audio_policy_generation", 0))
         if policy is None or generation < 1:
             return
-        result = policy.close(generation)
+        try:
+            result = policy.close(generation)
+        except Exception as exc:
+            self.logger.warning("audio policy close failed reason=%s", type(exc).__name__)
+            return
         self._audio_policy_result("close", result)
         if result.failure in {AudioPolicyFailure.NONE, AudioPolicyFailure.CLOSED}:
             self._audio_policy_transaction = None
@@ -2344,8 +2366,6 @@ class WhisperstreamApp:
         file_only_stop = getattr(self, "_file_only_stop", None)
         if file_only_stop is not None:
             file_only_stop.set()
-        self._dictation_app = None
-        self._last_waveform = None
         cleanup_lock = getattr(self, "_cleanup_lock", None)
         if cleanup_lock is None:
             cleanup_lock = threading.Lock()
@@ -2361,6 +2381,8 @@ class WhisperstreamApp:
             # to finish before snapshotting downstream owners. If it is merely
             # queued, publishing shutdown under the same lock makes it a no-op.
             with recording_lock:
+                self._dictation_app = None
+                self._last_waveform = None
                 self._cleanup_complete = True
                 executor = getattr(self, "_executor", None)
                 persistence_executor = getattr(self, "_persistence_executor", None)
@@ -2374,6 +2396,28 @@ class WhisperstreamApp:
                 text_injector = getattr(self, "text_injector", None)
                 recording = bool(getattr(self, "_recording", False))
                 self._active_capture_session_key = None
+                self._recording = False
+                self._discarding_recording = True
+                self._recording_acceptance_grant = None
+                self._recording_origin = None
+                self._started_via_toggle = False
+                for timer_name in ("_stop_timer", "_idle_timer"):
+                    timer = getattr(self, timer_name, None)
+                    if timer is not None:
+                        timer.cancel()
+                        setattr(self, timer_name, None)
+                self._invalidate_live_preview()
+                chunk_lock = getattr(self, "_chunk_futures_lock", None)
+                if chunk_lock is not None:
+                    with chunk_lock:
+                        for future in getattr(self, "_chunk_futures", ()):
+                            future.cancel()
+                        self._chunk_futures = []
+                lease = getattr(self, "_agent_compose_recording", None)
+                if lease is not None:
+                    self._retire_agent_compose(lease, state="cancelled", reason="shutdown")
+                if hasattr(self, "_dictation_state_lock"):
+                    self._transition_dictation_state(self.dictation_state_snapshot()["recording_id"], "idle")
                 enhancement_bakeoff = getattr(self, "enhancement_bakeoff", None)
 
         if enhancement_bakeoff is not None:
@@ -2382,7 +2426,7 @@ class WhisperstreamApp:
         if audio_capture is not None:
             if recording:
                 try:
-                    self._restore_system_volume()
+                    self._attempt_restore_system_volume()
                 except Exception:  # noqa: BLE001 - shutdown must keep closing capture
                     self.logger.warning("volume restore result=error origin=app_shutdown")
             try:
@@ -2392,7 +2436,8 @@ class WhisperstreamApp:
                         "audio capture close result=incomplete origin=app_shutdown "
                         "action=bounded_retry"
                     )
-                    capture_closed = audio_capture.close()
+                    if self._capture_cleanup_retryable():
+                        capture_closed = audio_capture.close()
                     if capture_closed is False:
                         self.logger.warning(
                             "audio capture close result=persistent_incomplete "
@@ -2714,6 +2759,8 @@ class WhisperstreamApp:
         if self._stop_routed_reply("push_to_talk"):
             return
         with self._lock:
+            if getattr(self, "_shutting_down", False):
+                return
             if self._recording and getattr(
                 self,
                 "_recording_origin",
@@ -2722,7 +2769,7 @@ class WhisperstreamApp:
                 None,
                 "push_to_talk",
             }:
-                self._restore_system_volume()
+                self._attempt_restore_system_volume()
                 self._stop_recording()
 
     def _on_toggle_start(self) -> None:
@@ -2740,6 +2787,8 @@ class WhisperstreamApp:
         Must be called while ``self._lock`` is held. The returned status is
         content-free and is used by the production REST command surface.
         """
+        if getattr(self, "_shutting_down", False):
+            return "recording_not_started"
         if origin not in _DICTATION_ORIGINS:
             raise ValueError(f"invalid dictation origin: {origin}")
         grant = self._current_acceptance_grant()
@@ -2790,7 +2839,7 @@ class WhisperstreamApp:
                     trigger="eula_revoked", play_feedback=False
                 )
                 return _EULA_BLOCK_CODE
-            self._restore_system_volume()
+            self._attempt_restore_system_volume()
             self._stop_recording()
             return "completed"
 
@@ -2852,21 +2901,20 @@ class WhisperstreamApp:
 
         Must be called from within self._lock and only when not self._recording.
         """
+        if getattr(self, "_shutting_down", False):
+            return False
         if not self._require_acceptance(
             getattr(self, "_recording_acceptance_grant", None)
         ):
+            return False
+        if self._capture_unavailable():
+            self._report_capture_failure()
             return False
         if not self._ensure_audio_capture_selection_locked():
             self.logger.warning(
                 "audio capture start failed reason=replacement_incomplete"
             )
-            copy = COPY["audio_capture_failed"]
-            self._dispatch_error_dialog(
-                "audio_capture_failed",
-                copy["title"],
-                copy["message"],
-                retry_action="restart_capture",
-            )
+            self._report_capture_failure()
             return False
         if not has_input_device():
             self.logger.warning("recording aborted reason=no_input_device")
@@ -2889,11 +2937,13 @@ class WhisperstreamApp:
     def _stop_ordinary_toggle(self) -> None:
         """Handle toggle deactivation — stop recording."""
         with self._lock:
+            if getattr(self, "_shutting_down", False):
+                return
             if (
                 self._recording
                 and getattr(self, "_recording_origin", None) == "toggle"
             ):
-                self._restore_system_volume()
+                self._attempt_restore_system_volume()
                 self._stop_recording()
 
     def _on_audio_level(self, level: float) -> None:
@@ -2960,7 +3010,8 @@ class WhisperstreamApp:
             coordinator.invalidate()
         # AudioCapture drops the bounded ring; an already-running decode owns
         # its independent snapshot and can only be discarded on completion.
-        self.audio_capture.set_preview_callback(None)
+        if self.audio_capture is not None:
+            self.audio_capture.set_preview_callback(None)
 
     def _freeze_live_preview(self) -> None:
         """Publish the latest complete hypothesis without starting more ASR."""
@@ -3084,6 +3135,8 @@ class WhisperstreamApp:
         return manager.for_language(language) if language is not None else manager
 
     def _start_recording(self) -> bool:
+        if getattr(self, "_shutting_down", False):
+            return False
         if getattr(self, "_stt_swap_in_progress", False):
             return False
         # A previous terminal path must never leave routing identity attached to
@@ -3205,8 +3258,7 @@ class WhisperstreamApp:
             self.logger.info("recording aborted reason=audio_capture_failed")
             self._play_recording_chime(ChimeKind.STOP)
             self._close_audio_policy()
-            c = COPY["audio_capture_failed"]
-            self._dispatch_error_dialog("audio_capture_failed", c["title"], c["message"], retry_action="restart_capture")
+            self._report_capture_failure()
             return False
         self._recording_startup_checkpoint("capture_open_complete")
         self._broadcast({"type": "state.arming", "active": False})
@@ -3302,6 +3354,8 @@ class WhisperstreamApp:
 
     def _handle_timeout(self, recording_id: int) -> None:
         with self._lock:
+            if getattr(self, "_shutting_down", False):
+                return
             current = self.dictation_state_snapshot()
             if (
                 self._recording
@@ -3309,7 +3363,7 @@ class WhisperstreamApp:
                 and current["phase"] == "recording"
             ):
                 self.logger.info("recording aborted reason=safety_timeout")
-                self._restore_system_volume()
+                self._attempt_restore_system_volume()
                 self._stop_recording()
 
     def _on_chunk_ready(self, chunk: np.ndarray) -> None:
@@ -3323,7 +3377,9 @@ class WhisperstreamApp:
             chunk_lock = threading.Lock()
             self._chunk_futures_lock = chunk_lock
         with chunk_lock:
-            if getattr(self, "_discarding_recording", False):
+            if (getattr(self, "_discarding_recording", False)
+                    or getattr(self, "_shutting_down", False)
+                    or getattr(self, "_recording", True) is False):
                 self.logger.debug("chunk skipped reason=dictation_cancelled")
                 return
             stt_manager = getattr(self, "_recording_stt_manager", None) or self.stt_engine
@@ -3442,7 +3498,8 @@ class WhisperstreamApp:
         )
 
     def _cancel_recording(
-        self, *, trigger: str = "hud", play_feedback: bool = True
+        self, *, trigger: str = "hud", play_feedback: bool = True,
+        capture_already_settled: bool = False
     ) -> None:
         """Stop capture and discard a recording without entering finalization.
 
@@ -3450,6 +3507,8 @@ class WhisperstreamApp:
         separate from ``_stop_recording``: no waveform, transcript, stats,
         review or history work may survive a real discard.
         """
+        if getattr(self, "_shutting_down", False):
+            return
         if self._stop_timer:
             self._stop_timer.cancel()
             self._stop_timer = None
@@ -3468,7 +3527,7 @@ class WhisperstreamApp:
         self._active_capture_session_key = None
         self._invalidate_live_preview()
         try:
-            self._restore_system_volume()
+            self._attempt_restore_system_volume()
         except Exception:  # noqa: BLE001 - restoration attempt cannot strand capture
             self.logger.warning(
                 "volume restore result=error origin=recording_cancel"
@@ -3496,7 +3555,9 @@ class WhisperstreamApp:
         try:
             active_session = getattr(self.audio_capture, "active_session", None)
             typed_cancel = getattr(self.audio_capture, "cancel_capture", None)
-            if (
+            if capture_already_settled:
+                fallback_close = self._capture_cleanup_retryable()
+            elif (
                 trigger == "device_lost"
                 and isinstance(active_session, CaptureSession)
                 and callable(typed_cancel)
@@ -3527,7 +3588,7 @@ class WhisperstreamApp:
                 "action=bounded_close_retry",
                 type(exc).__name__,
             )
-        if fallback_close:
+        if fallback_close and self._capture_cleanup_retryable():
             try:
                 close_complete = self.audio_capture.close()
                 if close_complete is False:
@@ -3597,6 +3658,8 @@ class WhisperstreamApp:
         )
 
     def _stop_recording(self) -> None:
+        if getattr(self, "_shutting_down", False):
+            return
         grant = getattr(self, "_recording_acceptance_grant", None)
         if not self._acceptance_is_current(grant):
             self._broadcast_acceptance_blocked()
@@ -3622,9 +3685,30 @@ class WhisperstreamApp:
         # Direct/private callers and future terminal surfaces must preserve the
         # same D-045 ordering as hotkey/HUD callers: restore before capture stop.
         # Repeated calls are idempotent inside the generation-bound adapter.
-        self._restore_system_volume()
-        self.audio_capture.set_level_callback(None)
-        waveform = self.audio_capture.stop()
+        self._attempt_restore_system_volume()
+        try:
+            self.audio_capture.set_level_callback(None)
+        except Exception as exc:
+            self.logger.warning("audio level detach failed reason=%s", type(exc).__name__)
+        try:
+            if getattr(self.audio_capture, "terminal_operations_owned", False) is True:
+                session = self.audio_capture.active_session
+                completion = self.audio_capture.stop_capture(session)
+                if completion.status is not CaptureCompletionStatus.STOPPED:
+                    self._cancel_recording(trigger="capture_failed", play_feedback=False,
+                                           capture_already_settled=True)
+                    if completion.status is CaptureCompletionStatus.FAILED:
+                        self._report_capture_failure()
+                    return
+                waveform = completion.audio
+            else:
+                waveform = self.audio_capture.stop()
+        except Exception as exc:
+            self.logger.warning("recording stop failed reason=%s", type(exc).__name__)
+            self._cancel_recording(trigger="capture_failed", play_feedback=False,
+                                   capture_already_settled=True)
+            self._report_capture_failure()
+            return
         self._active_capture_session_key = None
         self._recording = False
 
@@ -4799,6 +4883,8 @@ class WhisperstreamApp:
 
     def _ensure_audio_capture_selection_locked(self) -> bool:
         """Make the idle capture adapter match the latest saved selection."""
+        if getattr(self, "_shutting_down", False) or self._capture_unavailable():
+            return False
         target = getattr(self.config, "audio_input_device", "")
         if getattr(self, "_recording", False):
             return False
@@ -5357,7 +5443,8 @@ class WhisperstreamApp:
 
     def _settle_capture_terminal_event(self, event: CaptureTerminalEvent) -> None:
         """Claim and discard one exact active capture generation off callback."""
-        if event.failure not in (CaptureFailure.DEVICE_LOST, CaptureFailure.STREAM_FAILED):
+        if event.failure not in (CaptureFailure.DEVICE_LOST, CaptureFailure.STREAM_FAILED,
+                                 CaptureFailure.TIMEOUT, CaptureFailure.CLEANUP_FAILED):
             return
         with self._lock:
             if getattr(self, "_shutting_down", False):
@@ -5376,13 +5463,7 @@ class WhisperstreamApp:
             )
             self._active_capture_session_key = None
             self._cancel_recording(trigger="device_lost")
-            copy = COPY["audio_capture_failed"]
-            self._dispatch_error_dialog(
-                "audio_capture_failed",
-                copy["title"],
-                copy["message"],
-                retry_action="restart_capture",
-            )
+            self._report_capture_failure()
 
     def _log_capture_status(self, message: str) -> None:
         self.logger.debug("audio capture status event=updated")

@@ -768,7 +768,7 @@ def test_cleanup_drains_finalizer_then_nested_persistence_and_clears_content():
     app._last_waveform = np.ones(4, dtype=np.float32)
     app._dictation_app = object()
     app._chunk_futures = [object()]
-    app._agent_compose_recording = object()
+    app._agent_compose_recording = SimpleNamespace(generation=9)
     app._agent_compose_pending_generation = 9
     app.text_injector = SimpleNamespace(
         _last_transcript="processed", _last_original="raw"
@@ -786,6 +786,7 @@ def test_cleanup_drains_finalizer_then_nested_persistence_and_clears_content():
     app.cleanup()
 
     assert completed == ["persisted"]
+    assert app._agent_compose_recording is None
     assert app.transcript_store is None
     store_mock.clear_data_key.assert_called_once()
     store_mock.close.assert_called_once()

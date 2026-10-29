@@ -13,6 +13,10 @@ COPY = {
         "title": "Couldn't load the speech model",
         "message": "Restart Whisperstream to try again. You can also re-download the model from settings.",
     },
+    "audio_capture_unavailable": {
+        "title": "Recording unavailable",
+        "message": "Audio capture could not finish safely. Quit and reopen Whisperstream before recording again.",
+    },
     "audio_capture_failed": {
         "title": "Couldn't start recording",
         "message": "Check that your microphone is connected, then try again.",

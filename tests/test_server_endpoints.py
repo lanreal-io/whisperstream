@@ -3476,6 +3476,48 @@ def test_windows_device_inventory_failure_keeps_existing_empty_list_response() -
     assert response.json() == []
 
 
+def test_windows_blocked_inventory_allows_http_and_websocket_progress():
+    from concurrent.futures import ThreadPoolExecutor
+
+    entered, release = threading.Event(), threading.Event()
+    client, _server = _make_client()
+
+    def inventory():
+        entered.set()
+        assert release.wait(10)
+        return []
+
+    def websocket_message():
+        with client.websocket_connect("/ws", headers={"origin": "http://testserver"}) as ws:
+            return ws.receive_json()
+
+    with patch("whisperstream.server.app.platform.system", return_value="Windows"), patch(
+        "whisperstream.capture.list_input_devices", side_effect=inventory
+    ), client, ThreadPoolExecutor(max_workers=3) as pool:
+        # The context-managed TestClient shares one ASGI loop across callers.
+        devices = pool.submit(client.get, "/api/devices")
+        try:
+            assert entered.wait(2)
+            health = pool.submit(client.get, "/api/health")
+            websocket = pool.submit(websocket_message)
+            assert health.result(timeout=2).status_code == 200
+            assert websocket.result(timeout=2)["type"] == "license.status"
+            assert not devices.done()
+        finally:
+            release.set()
+        assert devices.result(timeout=2).json() == []
+
+
+def test_unconfirmed_capture_owner_blocks_native_inventory():
+    client, server = _make_client()
+    server._app.audio_capture = SimpleNamespace(capture_available=False)
+    with client, patch("whisperstream.capture.list_input_devices") as inventory:
+        response = client.get("/api/devices")
+    assert response.status_code == 503
+    assert response.json() == {"error": "audio_device_inventory_unavailable"}
+    inventory.assert_not_called()
+
+
 def test_windows_config_api_excludes_mac_input_identity_fields() -> None:
     from whisperstream.config_manager import WhisperstreamConfig
 
