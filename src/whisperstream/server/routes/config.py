@@ -1,6 +1,7 @@
 """Live config patch and capability query HTTP contracts."""
 from __future__ import annotations
 
+import asyncio
 import platform
 from collections.abc import Awaitable, Callable
 from typing import Any, Dict
@@ -38,7 +39,7 @@ def register_config_routes(
     @api.get("/api/config")
     async def get_config():
         from ...config_manager import get_app_dir
-        config, input_devices = reconcile_input_selection()
+        config, input_devices = await asyncio.to_thread(reconcile_input_selection)
         payload = _client_config_dict(
             config,
             current_config_manager(),

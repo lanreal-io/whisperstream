@@ -736,3 +736,94 @@ def test_terminal_event_rejects_invalid_generation_and_failure() -> None:
         CaptureTerminalEvent("capture", 1, "device-lost", 1)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="owner_epoch"):
         CaptureTerminalEvent("capture", 1, CaptureFailure.DEVICE_LOST, 0)
+
+
+@pytest.mark.parametrize('failure', [CaptureFailure.TIMEOUT, CaptureFailure.CLEANUP_FAILED])
+@pytest.mark.parametrize('origin', ['push_to_talk', 'toggle', 'agent_compose'])
+@pytest.mark.parametrize('raises', [True, False])
+def test_synchronous_stop_failure_settles_without_second_native_call(failure, origin, raises):
+    from whisperstream.macos_capture import AudioCaptureError
+    app, capture, event, events, *_ = _make_app(restore_fails=True)
+    app._recording_origin = origin
+    app._acceptance_is_current = lambda _: True
+    app._freeze_live_preview = MagicMock()
+    capture.terminal_operations_owned = True  # Mac owns its one terminal operation.
+    capture.capture_available = False
+    def stop(session):
+        events.append('native-stop')
+        if raises:
+            raise AudioCaptureError(failure)
+        return CaptureCompletion(request_id=session.request_id, generation=session.generation,
+                                 status=CaptureCompletionStatus.FAILED, failure=failure)
+    capture.stop_capture = stop
+    app._stop_recording()
+    assert events.index('output-restore-attempt') < events.index('native-stop')
+    assert events.count('native-stop') == 1
+    assert capture.cancel_calls == capture.close_calls == 0
+    assert not app._recording and app._last_waveform is None
+    assert app._chunk_futures == []
+    app._close_audio_policy.assert_called_once()
+    assert app._dispatch_error_dialog.call_args.kwargs['retry_action'] is None
+    app.text_injector.inject.assert_not_called()
+    app._persistence_executor.assert_not_called()
+
+
+def test_callback_only_failure_restores_before_blocked_native_cleanup(monkeypatch, capture_stack):
+    from whisperstream import macos_capture as module
+    from whisperstream.capture_contract import CaptureRequest
+    monkeypatch.setattr(module, 'CAPTURE_STOP_TIMEOUT_SECONDS', .02)
+    app, _, _, events, *_ = _make_app(restore_fails=True)
+    pending = []
+    capture = capture_stack.adapter(terminal_callback=pending.append)
+    session = capture.start_capture(CaptureRequest('callback-only', 1)).session
+    app.audio_capture = capture
+    app._active_capture_session_key = (capture.owner_epoch, session.request_id, session.generation)
+    stream = capture_stack.created[-1]
+    release = threading.Event()
+    def stop(**kwargs):
+        events.append('native-stop')
+        release.wait(2)
+    stream.stop = stop
+    stream.finished_callback()
+    assert len(pending) == 1
+    try:
+        app._settle_capture_terminal_event(pending[0])
+        assert events.index('output-restore-attempt') < events.index('native-stop')
+        assert not app._recording and not capture.capture_available
+        app._close_audio_policy.assert_called_once()
+        assert not stream.closed
+    finally:
+        release.set()
+
+
+from tests.test_macos_capture_adapter import capture_stack
+
+
+def test_mac_released_failure_does_not_close_or_disable_adapter(capture_stack):
+    from whisperstream.capture_contract import CaptureRequest
+    app, _, _, events, *_ = _make_app()
+    pending = []
+    capture = capture_stack.adapter(terminal_callback=pending.append)
+    session = capture.start_capture(CaptureRequest('released-failure', 1)).session
+    app.audio_capture = capture
+    app._active_capture_session_key = (capture.owner_epoch, session.request_id, session.generation)
+    capture_stack.created[-1].finished_callback()
+    app._settle_capture_terminal_event(pending[0])
+    assert capture.capture_available
+    assert not app._recording
+    assert capture.start_capture(CaptureRequest('next', 2)).session is not None
+
+
+def test_unavailable_start_and_selection_skip_native_preflight():
+    app, capture, *_ = _make_app()
+    capture.capture_available = False
+    app._require_acceptance = lambda _: True
+    app.config = SimpleNamespace(audio_input_device='changed')
+    app._recording = False
+    with patch('whisperstream.main.has_input_device') as probe, patch('whisperstream.main.AudioCapture') as replacement:
+        for _ in range(3):
+            assert app._try_begin_recording() is False
+            assert app._ensure_audio_capture_selection_locked() is False
+        probe.assert_not_called()
+        replacement.assert_not_called()
+    assert capture.close_calls == 0

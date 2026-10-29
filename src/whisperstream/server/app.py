@@ -1428,6 +1428,8 @@ class WhisperstreamServer:
             return current, None
         if not isinstance(current, WhisperstreamConfig):
             return current, None
+        if getattr(getattr(self._app, "audio_capture", None), "capture_available", True) is False:
+            return current, []
         recording_lock = getattr(self._app, "_lock", None)
         if recording_lock is None:
             self._logger.warning(
