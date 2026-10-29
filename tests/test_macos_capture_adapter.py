@@ -76,13 +76,13 @@ class FakeStream:
             raise OSError("synthetic open failure")
         self.started = True
 
-    def stop(self) -> None:
+    def stop(self, *, ignore_errors=False) -> None:
         self.stopped = True
         if self.fail_stop:
             raise OSError("synthetic stop failure")
         self.finished_callback()
 
-    def close(self) -> None:
+    def close(self, *, ignore_errors=False) -> None:
         self.closed = True
 
 
@@ -163,14 +163,18 @@ def capture_stack(monkeypatch):
     monkeypatch.setattr(capture_module.sd, "check_input_settings", check_input_settings)
     monkeypatch.setattr(capture_module.sd, "InputStream", input_stream)
 
+    adapters = []
+
     def adapter(**kwargs):
-        return MacosCaptureAdapter(
+        instance = MacosCaptureAdapter(
             _bridge=bridge,
             _permission_state=lambda: PermissionState.GRANTED,
             **kwargs,
         )
+        adapters.append(instance)
+        return instance
 
-    return SimpleNamespace(
+    yield SimpleNamespace(
         adapter=adapter,
         bridge=bridge,
         state=state,
@@ -179,6 +183,8 @@ def capture_stack(monkeypatch):
         built_in=built_in,
         virtual=virtual,
     )
+    for instance in adapters:
+        instance.close()
 
 
 def _start(adapter: MacosCaptureAdapter, request: CaptureRequest | None = None):
@@ -360,7 +366,7 @@ def test_open_failure_retains_unclean_stream_and_blocks_next_start(
     capture_stack.state.fail_start.add(capture_stack.state.default_index)
     close_attempts = 0
 
-    def _persistent_close(stream: FakeStream) -> None:
+    def _persistent_close(stream: FakeStream, *, ignore_errors=False) -> None:
         nonlocal close_attempts
         close_attempts += 1
         if close_attempts < 3:
@@ -374,7 +380,8 @@ def test_open_failure_retains_unclean_stream_and_blocks_next_start(
 
     assert outcome.failure is CaptureFailure.CLEANUP_FAILED
     retained = adapter.active_session
-    assert retained is not None
+    assert retained is None
+    assert adapter.capture_available is False
     assert adapter.stream_open
     blocked = adapter.start_capture(CaptureRequest("blocked-open", 17))
     assert blocked.failure is CaptureFailure.NATIVE_ERROR
@@ -382,9 +389,10 @@ def test_open_failure_retains_unclean_stream_and_blocks_next_start(
         adapter.start()
     assert adapter.active_session is retained
     assert len(capture_stack.created) == 1
-    assert adapter.close() is True
+    assert adapter.close() is False
+    assert close_attempts == 1
     assert adapter.active_session is None
-    assert not adapter.stream_open
+    assert adapter.stream_open
 
 
 def test_supported_format_discovery_does_not_touch_portaudio_before_grant(
@@ -518,14 +526,13 @@ def test_cancel_stale_generation_device_loss_and_callback_failure_close(capture_
     ).session
     assert failed_session is not None
     failed_stream = capture_stack.created[-1]
-    with pytest.raises(capture_module.sd.CallbackAbort):
-        failed_stream.callback(np.ones((8, 1), dtype=np.float32), 8, None, None)
+    failed_stream.callback(np.ones((8, 1), dtype=np.float32), 8, None, None)
     failed = failing.stop_capture(failed_session)
-    assert failed.failure is CaptureFailure.STREAM_FAILED
+    assert failed.status is CaptureCompletionStatus.STOPPED
     assert failed_stream.closed and not failing.stream_open
 
 
-def test_device_loss_close_failure_is_authoritative_and_retryable(
+def test_device_loss_close_failure_is_authoritative_and_quarantined(
     capture_stack,
 ) -> None:
     adapter = capture_stack.adapter()
@@ -534,7 +541,7 @@ def test_device_loss_close_failure_is_authoritative_and_retryable(
     stream.finished_callback()
     attempts = 0
 
-    def flaky_close() -> None:
+    def flaky_close(*, ignore_errors=False) -> None:
         nonlocal attempts
         attempts += 1
         if attempts < 3:
@@ -555,13 +562,13 @@ def test_device_loss_close_failure_is_authoritative_and_retryable(
     with pytest.raises(capture_module.AudioCaptureError):
         adapter.start()
     assert len(capture_stack.created) == created_before
-    assert adapter.close() is True
-    assert attempts == 3
-    assert adapter.active_session is None
-    assert not adapter.stream_open
+    assert adapter.close() is False
+    assert attempts == 1
+    assert adapter.active_session is session
+    assert adapter.stream_open
 
 
-def test_device_loss_worker_timeout_is_authoritative_and_retryable(
+def test_device_loss_worker_timeout_is_authoritative_and_quarantined(
     monkeypatch,
     capture_stack,
 ) -> None:
@@ -598,8 +605,9 @@ def test_device_loss_worker_timeout_is_authoritative_and_retryable(
     with pytest.raises(capture_module.AudioCaptureError):
         adapter.start()
     release.set()
-    assert adapter.close() is True
-    assert adapter.active_session is None
+    adapter._context.released.wait(2)
+    assert adapter.close() is False
+    assert adapter.capture_available is False
     assert not adapter.chunk_worker_alive
 
 

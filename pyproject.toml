@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "whisperstream"
-version = "2.0.1"
+version = "2.0.2"
 description = "parakeetV3 powered cpu only Speech-To-Text Local Inference on Windows. Inspired by hyprwhspr on Omarchy."
 readme = "README.md"
 license = "GPL-3.0-only"

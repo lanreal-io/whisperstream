@@ -31,6 +31,7 @@ from whisperstream.capture_contract import (
     CAPTURE_DTYPE,
     CAPTURE_SAMPLE_RATE,
     CAPTURE_STOP_TIMEOUT_SECONDS,
+    CAPTURE_START_TIMEOUT_SECONDS,
     CaptureCompletion,
     CaptureCompletionStatus,
     CaptureDevice,
@@ -562,8 +563,42 @@ class AudioCaptureError(RuntimeError):
         super().__init__(failure.value)
 
 
+@dataclass(eq=False)
+class _CaptureContext:
+    """Resources belong to one admission, including after a caller times out."""
+
+    request: CaptureRequest
+    level: Callable[[float], None] | None
+    chunk: Callable[[np.ndarray], None] | None
+    preview: Callable[[], None] | None
+    armed: bool
+    session: CaptureSession | None = None
+    stream: Any = None
+    token: object = field(default_factory=object)
+    frames: list[np.ndarray] = field(default_factory=list)
+    frames_lock: threading.Lock = field(default_factory=threading.Lock)
+    ring: _PreviewAudioRing | None = None
+    chunk_buffer: ChunkBuffer | None = None
+    chunk_queue: queue.Queue[np.ndarray | None] = field(default_factory=queue.Queue)
+    chunk_worker: threading.Thread | None = None
+    failure: CaptureFailure | None = None
+    terminal_reported: bool = False
+    terminal_submitted: bool = False
+    cancelled: bool = False
+    abandoned: bool = False
+    retired: bool = False
+    release_uncertain: bool = False
+    open_done: threading.Event = field(default_factory=threading.Event)
+    done: threading.Event = field(default_factory=threading.Event)
+    released: threading.Event = field(default_factory=threading.Event)
+    start_result: CaptureStartOutcome | None = None
+    result: CaptureCompletion | None = None
+
+
 class MacosCaptureAdapter:
-    """Generation-bound CoreAudio/PortAudio capture for Apple Silicon."""
+    """One native owner; callbacks never initiate PortAudio shutdown."""
+
+    terminal_operations_owned = True
 
     def __init__(
         self,
@@ -581,62 +616,466 @@ class MacosCaptureAdapter:
         _permission_state: Callable[[], PermissionState] | None = None,
     ) -> None:
         native_host = platform.system() == "Darwin" and platform.machine() == "arm64"
-        fully_injected = _bridge is not None and _permission_state is not None
-        if not native_host and not fully_injected:
+        if not native_host and not (_bridge is not None and _permission_state is not None):
             raise RuntimeError("macOS capture adapter requires Darwin arm64")
         CaptureFormat(sample_rate=sample_rate, channels=channels, dtype=dtype)
-        self.sample_rate = sample_rate
-        self.channels = channels
-        self.dtype = dtype
+        self.sample_rate, self.channels, self.dtype = sample_rate, channels, dtype
         self._device_name = device
         self._status_callback = status_callback
         self._terminal_callback = terminal_callback
         self._owner_epoch = allocate_capture_owner_epoch()
-        self._level_callback: Callable[[float], None] | None = None
+        self._level_callback = None
         self._chunk_callback = chunk_callback
-        self._chunk_duration = chunk_duration
-        self._chunk_overlap = chunk_overlap
+        self._chunk_duration, self._chunk_overlap = chunk_duration, chunk_overlap
+        self._preview_callback = None
+        self._preview_max_duration = 0.0
         self._bridge = _bridge or _NativeCoreAudioBridge()
         self._permission_state = _permission_state or _query_microphone_permission_state
-
-        self._stream: object | None = None
-        self._capture_armed = threading.Event()
-        self._capture_armed.set()
-        self._frames: list[np.ndarray] = []
-        self._frames_lock = threading.Lock()
         self._state_lock = threading.Lock()
-        self._active_session: CaptureSession | None = None
-        self._active_failure: CaptureFailure | None = None
-        self._stopping = False
+        self._context = None
+        self._quarantined = False
+        self._closed = False
         self._generation = 0
-        self._legacy_session: CaptureSession | None = None
+        self._legacy_session = None
+        self._discard_until_armed = False
+        self._operations = queue.Queue()
+        self._worker = None
+        self._shutdown_queued = False
 
-        self._chunk_buffer: ChunkBuffer | None = None
-        self._chunk_queue: queue.Queue[np.ndarray | None] = queue.Queue()
-        self._chunk_worker: threading.Thread | None = None
-        self._preview_callback: Callable[[], None] | None = None
-        self._preview_max_duration = 0.0
-        self._preview_ring: _PreviewAudioRing | None = None
+    @property
+    def capture_available(self) -> bool:
+        with self._state_lock:
+            return not self._quarantined and not self._closed
 
     @property
     def stream_open(self) -> bool:
-        return self._stream is not None
+        ctx = self._context
+        return ctx is not None and ctx.stream is not None
+
+    @property
+    def _stream(self):
+        ctx = self._context
+        return ctx.stream if ctx else None
 
     @property
     def chunk_worker_alive(self) -> bool:
-        worker = self._chunk_worker
-        return worker is not None and worker.is_alive()
+        ctx = self._context
+        return bool(ctx and ctx.chunk_worker and ctx.chunk_worker.is_alive())
 
     @property
     def active_session(self) -> CaptureSession | None:
         with self._state_lock:
-            return self._active_session
+            ctx = self._context
+            return ctx.session if ctx and (not ctx.retired or self._quarantined) else None
 
     @property
     def owner_epoch(self) -> int:
         return self._owner_epoch
 
+    def _submit_locked(self, operation, ctx):
+        if self._worker is None:
+            self._worker = threading.Thread(target=self._work, daemon=True,
+                                            name="macos-capture-owner")
+            self._worker.start()
+        self._operations.put((operation, ctx))
+
+    def _work(self):
+        while True:
+            operation, ctx = self._operations.get()
+            if operation == "shutdown":
+                return
+            try:
+                if operation == "open":
+                    self._open(ctx)
+                else:
+                    self._finish(ctx)
+            except Exception as exc:
+                # Keep uncertain resources alive. Never allow another owner to
+                # retry native work after an unexpected owner failure.
+                logger.warning("audio owner failed reason=%s", type(exc).__name__)
+                with self._state_lock:
+                    self._quarantined = True
+                    ctx.abandoned = True
+                    ctx.start_result = ctx.start_result or CaptureStartOutcome(failure=CaptureFailure.NATIVE_ERROR)
+                    ctx.result = ctx.result or self._completion(ctx, CaptureFailure.CLEANUP_FAILED)
+                    ctx.open_done.set()
+                    ctx.done.set()
+
+    @staticmethod
+    def _completion(ctx, failure=None, audio=None):
+        return CaptureCompletion(
+            request_id=ctx.request.request_id, generation=ctx.request.generation,
+            status=(CaptureCompletionStatus.FAILED if failure else
+                    CaptureCompletionStatus.CANCELLED if ctx.cancelled else CaptureCompletionStatus.STOPPED),
+            failure=failure, audio=audio if not failure and not ctx.cancelled else None)
+
+    @staticmethod
+    def _notify(callback, *args):
+        if callback is not None:
+            try:
+                callback(*args)
+            except Exception as exc:
+                logger.warning("audio notification failed reason=%s", type(exc).__name__)
+
+    def set_level_callback(self, callback: Callable[[float], None] | None) -> None:
+        with self._state_lock:
+            self._level_callback = callback
+            if self._context:
+                self._context.level = callback
+
+    def set_preview_callback(self, callback, *, max_duration=0.0):
+        with self._state_lock:
+            self._preview_callback = callback
+            self._preview_max_duration = max(0.0, float(max_duration))
+            if self._context:
+                self._context.preview = callback
+
+    def preview_snapshot(self) -> PreviewAudioSnapshot:
+        with self._state_lock:
+            ctx = self._context
+            ring = ctx.ring if ctx and ctx.preview and not ctx.retired and not ctx.abandoned else None
+        return ring.snapshot() if ring else PreviewAudioSnapshot(np.empty(0, dtype=np.float32), 0, 0)
+
+    def _failure(self, ctx, token, failure):
+        event = None
+        with self._state_lock:
+            if self._context is not ctx or ctx.token is not token or ctx.retired or ctx.abandoned:
+                return
+            ctx.failure = ctx.failure or failure
+            ctx.armed = False
+            if not ctx.terminal_reported:
+                ctx.terminal_reported = True
+                event = CaptureTerminalEvent(ctx.request.request_id, ctx.request.generation,
+                                             ctx.failure, self._owner_epoch)
+        # This callback enqueues the pre-cleanup app request. It must never wait
+        # for the app lock. App restoration precedes its terminal submission.
+        if event is not None:
+            self._notify(self._terminal_callback, event)
+
+    def _finished(self, ctx, token):
+        with self._state_lock:
+            expected = ctx.terminal_submitted or ctx.abandoned or ctx.retired or ctx.token is not token
+        if not expected:
+            self._failure(ctx, token, CaptureFailure.DEVICE_LOST)
+
+    def _stream_callback(self, ctx, token, indata, _frames, _time, status):
+        try:
+            with self._state_lock:
+                if self._context is not ctx or ctx.token is not token or ctx.retired or ctx.abandoned or not ctx.armed or ctx.failure:
+                    return
+                level, preview, ring = ctx.level, ctx.preview, ctx.ring
+            if status:
+                self._notify(self._status_callback, "stream-status")
+            data = np.asarray(indata, dtype=np.float32)
+            mono = np.mean(data, axis=1, dtype=np.float32) if data.ndim > 1 and data.shape[1] > 1 else data.reshape(-1).copy()
+            mono = np.ascontiguousarray(mono, dtype=np.float32)
+            with ctx.frames_lock:
+                ctx.frames.append(mono)
+            if ctx.chunk_buffer is not None:
+                for chunk in ctx.chunk_buffer.append(mono):
+                    ctx.chunk_queue.put(chunk)
+            # Preview and levels are optional. Their failures cannot abort
+            # authoritative capture or initiate callback-side native shutdown.
+            try:
+                if ring is not None and preview is not None:
+                    ring.append(mono)
+                    self._notify(preview)
+            except Exception as exc:
+                logger.warning("audio preview failed reason=%s", type(exc).__name__)
+            try:
+                if level is not None:
+                    rms = float(np.sqrt(np.mean(mono**2))) if mono.size else 0.0
+                    self._notify(level, min(rms * 10.0, 1.0))
+            except Exception as exc:
+                logger.warning("audio level failed reason=%s", type(exc).__name__)
+        except Exception as exc:
+            logger.warning("audio callback failed reason=%s", type(exc).__name__)
+            self._failure(ctx, token, CaptureFailure.STREAM_FAILED)
+            # Return normally: PortAudio callback abort can race explicit stop.
+
+    def _chunks(self, ctx):
+        while True:
+            chunk = ctx.chunk_queue.get()
+            if chunk is None:
+                return
+            with self._state_lock:
+                callback = ctx.chunk if not (ctx.abandoned or ctx.cancelled or ctx.failure or ctx.retired) else None
+            self._notify(callback, chunk)
+
+    @staticmethod
+    def _coreaudio_settings():
+        return sd.CoreAudioSettings(change_device_parameters=False,
+                                   fail_if_conversion_required=False, conversion_quality="max")
+
+    def _check_canonical_format(self, device_index):
+        sd.check_input_settings(device=device_index, channels=CAPTURE_CHANNELS,
+                                dtype=CAPTURE_DTYPE, samplerate=CAPTURE_SAMPLE_RATE,
+                                extra_settings=self._coreaudio_settings())
+
+    def _close_native(self, ctx, *, stop):
+        stream = ctx.stream
+        if stream is None:
+            return None
+        if stop:
+            try:
+                stream.stop(ignore_errors=False)
+            except Exception as exc:
+                # Already-stopped and other stop errors do not establish release.
+                # Checked close below is the final resource ownership authority.
+                already_stopped = (
+                    isinstance(exc, sd.PortAudioError)
+                    and len(exc.args) > 1
+                    and exc.args[1] == sd._lib.paStreamIsStopped
+                )
+                if not already_stopped:
+                    logger.warning("audio native stop failed reason=%s", type(exc).__name__)
+                    ctx.failure = ctx.failure or CaptureFailure.CLEANUP_FAILED
+        try:
+            stream.close(ignore_errors=False)
+        except Exception as exc:
+            logger.warning("audio native close failed reason=%s", type(exc).__name__)
+            with self._state_lock:
+                self._quarantined = True
+                ctx.release_uncertain = True
+                ctx.abandoned = True
+            return CaptureFailure.CLEANUP_FAILED
+        ctx.stream = None
+        return None
+
+    def _open_one(self, ctx, index, expected_uid):
+        if ctx.abandoned or self._quarantined:
+            raise AudioCaptureError(CaptureFailure.TIMEOUT)
+        self._check_canonical_format(index)
+        token = object()
+        ctx.token = token
+        ctx.stream = sd.InputStream(
+            samplerate=CAPTURE_SAMPLE_RATE, channels=CAPTURE_CHANNELS,
+            dtype=CAPTURE_DTYPE, device=index,
+            callback=lambda *args: self._stream_callback(ctx, token, *args),
+            finished_callback=lambda: self._finished(ctx, token),
+            extra_settings=self._coreaudio_settings())
+        if ctx.abandoned:
+            raise AudioCaptureError(CaptureFailure.TIMEOUT)
+        ctx.stream.start()
+        if ctx.abandoned:
+            raise AudioCaptureError(CaptureFailure.TIMEOUT)
+        if int(round(float(ctx.stream.samplerate))) != CAPTURE_SAMPLE_RATE:
+            raise RuntimeError("PortAudio did not provide canonical sample rate")
+        actual = self._bridge.stream_input_uid(ctx.stream)
+        if expected_uid is not None and actual != expected_uid:
+            raise RuntimeError("PortAudio opened a different CoreAudio device")
+        return actual
+
+    def _open(self, ctx):
+        failure = None
+        try:
+            selected, provisional, resolution = self._resolve_request(ctx.request)
+            permission = self._permission_state()
+            if permission is not PermissionState.GRANTED:
+                raise AudioCaptureError(CaptureFailure.OPEN_FAILED if permission in {
+                    PermissionState.NOT_DETERMINED, PermissionState.RESTRICTED, PermissionState.DENIED
+                } else CaptureFailure.NATIVE_ERROR)
+            if self._chunk_duration > 0 and ctx.chunk:
+                ctx.chunk_buffer = ChunkBuffer(sample_rate=self.sample_rate,
+                    chunk_duration=self._chunk_duration, chunk_overlap=self._chunk_overlap)
+                ctx.chunk_worker = threading.Thread(target=self._chunks, args=(ctx,), daemon=True, name="macos-chunk-dispatch")
+                ctx.chunk_worker.start()
+            samples = int(round(self.sample_rate * self._preview_max_duration))
+            ctx.ring = _PreviewAudioRing(samples) if ctx.preview and samples > 0 else None
+            candidates = [(i, selected.uid) for i in selected.candidate_indices] if selected else []
+            candidates.append((None, None))
+            for index, uid in candidates:
+                try:
+                    actual = self._open_one(ctx, index, uid)
+                    if selected and index is None:
+                        resolution = CaptureSelectionResolution.FALLBACK_OPEN_FAILED
+                    break
+                except Exception:
+                    # Retire this candidate's callbacks before partial close.
+                    ctx.token = object()
+                    cleanup = self._close_native(ctx, stop=False)
+                    if cleanup or ctx.abandoned or (index, uid) == candidates[-1]:
+                        raise
+            with self._state_lock:
+                if ctx.abandoned:
+                    raise AudioCaptureError(CaptureFailure.TIMEOUT)
+                ctx.session = CaptureSession(ctx.request.request_id, ctx.request.generation,
+                                             _logical_device_id(actual), resolution)
+                ctx.start_result = CaptureStartOutcome(session=ctx.session)
+                ctx.open_done.set()
+            return
+        except AudioCaptureError as exc:
+            failure = exc.failure
+        except Exception as exc:
+            logger.warning("audio capture open failed reason=%s", type(exc).__name__)
+            failure = CaptureFailure.OPEN_FAILED
+        ctx.cancelled = True
+        # Failed close clears sounddevice's pointer, so it must not be retried.
+        if not ctx.release_uncertain:
+            cleanup = self._close_native(ctx, stop=False)
+            failure = cleanup or failure
+        else:
+            failure = CaptureFailure.CLEANUP_FAILED
+        if not ctx.release_uncertain:
+            self._drain(ctx)
+        with self._state_lock:
+            ctx.retired = True
+            ctx.start_result = ctx.start_result or CaptureStartOutcome(failure=failure)
+            ctx.result = ctx.result or self._completion(ctx, failure)
+            ctx.open_done.set()
+            ctx.done.set()
+            if not ctx.release_uncertain:
+                ctx.released.set()
+
+    def start_capture(
+        self,
+        request: CaptureRequest,
+        *,
+        on_level: Callable[[float], None] | None = None,
+        on_chunk: Callable[[np.ndarray], None] | None = None,
+    ) -> CaptureStartOutcome:
+        with self._state_lock:
+            if self._quarantined or self._closed or (self._context and not self._context.done.is_set()):
+                return CaptureStartOutcome(failure=CaptureFailure.NATIVE_ERROR)
+            ctx = _CaptureContext(request, on_level, on_chunk, self._preview_callback,
+                                  not self._discard_until_armed)
+            self._context = ctx
+            self._submit_locked("open", ctx)
+        if not ctx.open_done.wait(CAPTURE_START_TIMEOUT_SECONDS):
+            with self._state_lock:
+                if not ctx.open_done.is_set():
+                    ctx.abandoned = True
+                    ctx.armed = False
+                    self._quarantined = True
+                    ctx.start_result = CaptureStartOutcome(failure=CaptureFailure.TIMEOUT)
+        return ctx.start_result
+
+    def _drain(self, ctx):
+        if ctx.chunk_buffer is not None:
+            if not (ctx.cancelled or ctx.failure or ctx.abandoned):
+                tail = ctx.chunk_buffer.flush_tail()
+                if tail is not None:
+                    ctx.chunk_queue.put(tail)
+            ctx.chunk_buffer = None
+        if ctx.chunk_worker:
+            ctx.chunk_queue.put(None)
+            # The public deadline bounds the entire operation. This owner keeps
+            # resources until dispatch really exits, even after caller timeout.
+            ctx.chunk_worker.join()
+        if ctx.ring:
+            ctx.ring.reset()
+
+    def _finish(self, ctx: _CaptureContext) -> None:
+        cleanup = self._close_native(ctx, stop=True)
+        if not ctx.release_uncertain:
+            self._drain(ctx)
+        with self._state_lock:
+            ctx.retired = True
+            collect = not (cleanup or ctx.failure or ctx.cancelled or ctx.abandoned)
+        # Allocation is not a state transition. Keep it outside the admission
+        # lock so availability reads and the whole-operation deadline stay live.
+        audio = np.empty(0, dtype=np.float32)
+        if not ctx.release_uncertain:
+            with ctx.frames_lock:
+                frames = tuple(ctx.frames) if collect else ()
+                ctx.frames.clear()
+            if frames:
+                audio = np.concatenate(frames).astype(np.float32, copy=False)
+        with self._state_lock:
+            if ctx.result is None:
+                ctx.result = self._completion(ctx, cleanup or ctx.failure, audio)
+            ctx.done.set()
+            if not ctx.release_uncertain:
+                ctx.released.set()
+
+    def _terminal(self, session, *, cancel):
+        with self._state_lock:
+            ctx = self._context
+            if ctx is None or ctx.session != session:
+                return CaptureCompletion(session.request_id, session.generation,
+                    CaptureCompletionStatus.FAILED, failure=CaptureFailure.STALE_GENERATION)
+            if ctx.result is not None:
+                return ctx.result
+            ctx.cancelled = ctx.cancelled or cancel
+            if not ctx.terminal_submitted:
+                ctx.terminal_submitted = True
+                self._submit_locked("finish", ctx)
+        if not ctx.done.wait(CAPTURE_STOP_TIMEOUT_SECONDS):
+            with self._state_lock:
+                if ctx.result is None:
+                    self._quarantined = True
+                    ctx.abandoned = True
+                    ctx.armed = False
+                    ctx.result = self._completion(ctx, CaptureFailure.TIMEOUT)
+                    ctx.done.set()
+        return ctx.result
+
+    def stop_capture(self, session: CaptureSession) -> CaptureCompletion:
+        return self._terminal(session, cancel=False)
+
+    def cancel_capture(self, session: CaptureSession) -> CaptureCompletion:
+        return self._terminal(session, cancel=True)
+
+    def arm_capture(self) -> None:
+        with self._state_lock:
+            ctx = self._context
+            if ctx and not (ctx.abandoned or ctx.retired or ctx.failure):
+                ctx.armed = True
+
+    def start(self, *, discard_until_armed: bool = False) -> None:
+        self._discard_until_armed = discard_until_armed
+        self._generation += 1
+        selection = (CaptureSelection(preferred_id=self._device_name)
+                     if self._device_name.startswith("macos-input-") else
+                     CaptureSelection(legacy_name=self._device_name or None))
+        outcome = self.start_capture(CaptureRequest(f"macos-capture-{self._generation}", self._generation, selection),
+                                     on_level=self._level_callback, on_chunk=self._chunk_callback)
+        if outcome.failure:
+            raise AudioCaptureError(outcome.failure)
+        self._legacy_session = outcome.session
+
+    def stop(self) -> np.ndarray:
+        session = self._legacy_session or self.active_session
+        if session is None:
+            return np.empty(0, dtype=np.float32)
+        result = self.stop_capture(session)
+        if result.failure:
+            raise AudioCaptureError(result.failure)
+        return result.audio if result.audio is not None else np.empty(0, dtype=np.float32)
+
+    def cancel(self) -> None:
+        session = self._legacy_session or self.active_session
+        if session is not None:
+            result = self.cancel_capture(session)
+            if result.failure:
+                raise AudioCaptureError(result.failure)
+
+    def close(self) -> bool:
+        with self._state_lock:
+            ctx = self._context
+            self._closed = True
+            if ctx and not ctx.open_done.is_set():
+                ctx.abandoned = True
+                ctx.armed = False
+                self._quarantined = True
+            unavailable = self._quarantined
+        if ctx and ctx.session and not unavailable:
+            self.cancel_capture(ctx.session)
+        with self._state_lock:
+            if self._worker is not None and not self._shutdown_queued:
+                self._shutdown_queued = True
+                self._operations.put(("shutdown", None))
+            if self._quarantined:
+                return False
+            complete = not self.stream_open and not self.chunk_worker_alive
+            if complete:
+                self._context = None
+                self._legacy_session = None
+            return complete
+
     def _native_devices(self) -> tuple[_NativeInputDevice, ...]:
+        if not self.capture_available:
+            return ()
         return _query_native_input_devices(self._bridge)
 
     def enumerate_input_devices(self) -> CaptureInventory:
@@ -679,219 +1118,6 @@ class MacosCaptureAdapter:
             )
         return tuple(results)
 
-    def set_level_callback(self, callback: Callable[[float], None] | None) -> None:
-        self._level_callback = callback
-
-    def set_preview_callback(
-        self,
-        callback: Callable[[], None] | None,
-        *,
-        max_duration: float = 0.0,
-    ) -> None:
-        self._preview_callback = callback
-        self._preview_max_duration = max(0.0, float(max_duration))
-        if callback is None and self._preview_ring is not None:
-            self._preview_ring.reset()
-            self._preview_ring = None
-
-    def preview_snapshot(self) -> PreviewAudioSnapshot:
-        ring = self._preview_ring
-        if ring is None:
-            return PreviewAudioSnapshot(
-                np.empty(0, dtype=np.float32),
-                0,
-                0,
-            )
-        return ring.snapshot()
-
-    def _chunk_dispatch_loop(self) -> None:
-        while True:
-            chunk = self._chunk_queue.get()
-            if chunk is None:
-                return
-            callback = self._chunk_callback
-            if callback is None:
-                continue
-            try:
-                callback(chunk)
-            except Exception:
-                logger.exception("audio chunk callback failed origin=stream")
-
-    def _prepare_stream_work(self) -> None:
-        self._chunk_queue = queue.Queue()
-        if self._chunk_duration > 0 and self._chunk_callback is not None:
-            self._chunk_buffer = ChunkBuffer(
-                sample_rate=self.sample_rate,
-                chunk_duration=self._chunk_duration,
-                chunk_overlap=self._chunk_overlap,
-            )
-            self._chunk_worker = threading.Thread(
-                target=self._chunk_dispatch_loop,
-                daemon=True,
-                name="macos-chunk-dispatch",
-            )
-            self._chunk_worker.start()
-        else:
-            self._chunk_buffer = None
-            self._chunk_worker = None
-
-        preview_samples = int(round(self.sample_rate * self._preview_max_duration))
-        self._preview_ring = (
-            _PreviewAudioRing(preview_samples)
-            if self._preview_callback is not None and preview_samples > 0
-            else None
-        )
-        with self._frames_lock:
-            self._frames.clear()
-
-    def _record_failure(self, failure: CaptureFailure) -> None:
-        with self._state_lock:
-            if self._active_session is not None and self._active_failure is None:
-                self._active_failure = failure
-
-    def _on_stream_finished(self) -> None:
-        callback: Callable[[str], None] | None = None
-        terminal_callback: CaptureTerminalCallback | None = None
-        terminal_event: CaptureTerminalEvent | None = None
-        with self._state_lock:
-            if (
-                self._active_session is not None
-                and not self._stopping
-                and self._active_failure is None
-            ):
-                self._active_failure = CaptureFailure.DEVICE_LOST
-                callback = self._status_callback
-                terminal_callback = self._terminal_callback
-                terminal_event = CaptureTerminalEvent(
-                    request_id=self._active_session.request_id,
-                    generation=self._active_session.generation,
-                    failure=CaptureFailure.DEVICE_LOST,
-                    owner_epoch=self._owner_epoch,
-                )
-        if terminal_callback is not None and terminal_event is not None:
-            try:
-                terminal_callback(terminal_event)
-            except Exception:  # noqa: BLE001 - cleanup must continue
-                logger.warning("audio terminal callback failed origin=device_loss")
-        if callback is not None:
-            try:
-                callback(CaptureFailure.DEVICE_LOST.value)
-            except Exception:  # noqa: BLE001 - cleanup must continue
-                logger.warning("audio status callback failed origin=device_loss")
-
-    def _stream_callback(
-        self,
-        indata: np.ndarray,
-        _frame_count: int,
-        _time_info: object,
-        status: object,
-    ) -> None:
-        try:
-            if status and self._status_callback is not None:
-                self._status_callback("stream-status")
-            if not self._capture_armed.is_set():
-                return
-            data = np.asarray(indata, dtype=np.float32)
-            if data.ndim > 1 and data.shape[1] > 1:
-                mono = np.mean(data, axis=1, dtype=np.float32)
-            else:
-                mono = data.reshape(-1).copy()
-            mono = np.ascontiguousarray(mono, dtype=np.float32)
-            with self._frames_lock:
-                self._frames.append(mono)
-
-            if self._preview_ring is not None:
-                self._preview_ring.append(mono)
-                if self._preview_callback is not None:
-                    try:
-                        self._preview_callback()
-                    except Exception:
-                        logger.exception("audio preview callback failed origin=stream")
-
-            if self._chunk_buffer is not None:
-                for chunk in self._chunk_buffer.append(mono):
-                    self._chunk_queue.put(chunk)
-
-            if self._level_callback is not None:
-                rms = float(np.sqrt(np.mean(mono**2))) if mono.size else 0.0
-                self._level_callback(min(rms * 10.0, 1.0))
-        except Exception as exc:
-            self._record_failure(CaptureFailure.STREAM_FAILED)
-            logger.warning("audio callback failed reason=%s", type(exc).__name__)
-            raise sd.CallbackAbort from exc
-
-    @staticmethod
-    def _coreaudio_settings():
-        return sd.CoreAudioSettings(
-            change_device_parameters=False,
-            fail_if_conversion_required=False,
-            conversion_quality="max",
-        )
-
-    def _check_canonical_format(self, device_index: int | None) -> None:
-        sd.check_input_settings(
-            device=device_index,
-            channels=CAPTURE_CHANNELS,
-            dtype=CAPTURE_DTYPE,
-            samplerate=CAPTURE_SAMPLE_RATE,
-            extra_settings=self._coreaudio_settings(),
-        )
-
-    def _close_partial_stream(self, stream: object | None) -> None:
-        if stream is None:
-            return
-        try:
-            stream.close()
-        except Exception:  # noqa: BLE001 - retain uncertain ownership
-            self._stream = stream
-
-    def _open_one_stream(
-        self,
-        device_index: int | None,
-        *,
-        expected_uid: str | None,
-    ) -> tuple[object, str]:
-        stream: object | None = None
-        try:
-            self._check_canonical_format(device_index)
-            stream = sd.InputStream(
-                samplerate=CAPTURE_SAMPLE_RATE,
-                channels=CAPTURE_CHANNELS,
-                dtype=CAPTURE_DTYPE,
-                device=device_index,
-                callback=self._stream_callback,
-                finished_callback=self._on_stream_finished,
-                extra_settings=self._coreaudio_settings(),
-            )
-            stream.start()
-            if int(round(float(stream.samplerate))) != CAPTURE_SAMPLE_RATE:
-                raise RuntimeError("PortAudio did not provide canonical sample rate")
-            actual_uid = self._bridge.stream_input_uid(stream)
-            if expected_uid is not None and actual_uid != expected_uid:
-                raise RuntimeError("PortAudio opened a different CoreAudio device")
-            return stream, actual_uid
-        except Exception:
-            self._close_partial_stream(stream)
-            raise
-
-    def _open_selected_stream(
-        self, selected: _NativeInputDevice
-    ) -> tuple[object, str]:
-        last_error: Exception | None = None
-        for device_index in selected.candidate_indices:
-            try:
-                return self._open_one_stream(
-                    device_index,
-                    expected_uid=selected.uid,
-                )
-            except Exception as exc:  # noqa: BLE001 - try same-name candidates
-                if self._stream is not None:
-                    raise
-                last_error = exc
-        if last_error is not None:
-            raise last_error
-        raise RuntimeError("selected PortAudio device unavailable")
-
     def _resolve_request(
         self, request: CaptureRequest
     ) -> tuple[_NativeInputDevice | None, str, CaptureSelectionResolution]:
@@ -933,311 +1159,6 @@ class MacosCaptureAdapter:
             return None, default_id, CaptureSelectionResolution.FALLBACK_MISSING
         return selected, selected.logical_id, CaptureSelectionResolution.SELECTED
 
-    def start_capture(
-        self,
-        request: CaptureRequest,
-        *,
-        on_level: Callable[[float], None] | None = None,
-        on_chunk: Callable[[np.ndarray], None] | None = None,
-    ) -> CaptureStartOutcome:
-        with self._state_lock:
-            if self._active_session is not None:
-                return CaptureStartOutcome(failure=CaptureFailure.NATIVE_ERROR)
-        try:
-            selected, provisional_id, resolution = self._resolve_request(request)
-        except AudioCaptureError as exc:
-            return CaptureStartOutcome(failure=exc.failure)
-        except Exception:
-            return CaptureStartOutcome(failure=CaptureFailure.NATIVE_ERROR)
-
-        permission_state = self._permission_state()
-        if permission_state in {
-            PermissionState.NOT_DETERMINED,
-            PermissionState.RESTRICTED,
-            PermissionState.DENIED,
-        }:
-            return CaptureStartOutcome(failure=CaptureFailure.OPEN_FAILED)
-        if permission_state is not PermissionState.GRANTED:
-            return CaptureStartOutcome(failure=CaptureFailure.NATIVE_ERROR)
-
-        session = CaptureSession(
-            request_id=request.request_id,
-            generation=request.generation,
-            device_id=provisional_id,
-            selection_resolution=resolution,
-        )
-        with self._state_lock:
-            self._active_session = session
-            self._active_failure = None
-            self._stopping = False
-        self._level_callback = on_level
-        self._chunk_callback = on_chunk
-
-        try:
-            self._prepare_stream_work()
-            try:
-                if selected is None:
-                    stream, actual_uid = self._open_one_stream(
-                        None,
-                        expected_uid=None,
-                    )
-                else:
-                    stream, actual_uid = self._open_selected_stream(selected)
-            except Exception as selected_error:
-                if selected is None or self._stream is not None:
-                    raise selected_error
-                logger.warning(
-                    "audio device open failed selection=selected fallback=system_default reason=%s",
-                    type(selected_error).__name__,
-                )
-                stream, actual_uid = self._open_one_stream(
-                    None,
-                    expected_uid=None,
-                )
-                resolution = CaptureSelectionResolution.FALLBACK_OPEN_FAILED
-            self._stream = stream
-            session = CaptureSession(
-                request_id=request.request_id,
-                generation=request.generation,
-                device_id=_logical_device_id(actual_uid),
-                selection_resolution=resolution,
-            )
-            with self._state_lock:
-                self._active_session = session
-        except Exception as exc:
-            logger.warning("audio capture open failed reason=%s", type(exc).__name__)
-            with self._state_lock:
-                self._stopping = True
-            _, cleanup_failure = self._finish_stream(
-                discard=True, flush_tail=False
-            )
-            if cleanup_failure is None:
-                with self._state_lock:
-                    self._active_session = None
-                    self._active_failure = None
-                    self._stopping = False
-            return CaptureStartOutcome(
-                failure=cleanup_failure or CaptureFailure.OPEN_FAILED
-            )
-
-        logger.info(
-            "audio device opened platform=macos resolution=%s sample_rate=%d channels=%d",
-            session.selection_resolution.value,
-            CAPTURE_SAMPLE_RATE,
-            CAPTURE_CHANNELS,
-        )
-        return CaptureStartOutcome(session=session)
-
-    def _stop_chunk_worker(self, *, discard_pending: bool) -> bool:
-        worker = self._chunk_worker
-        if worker is None:
-            return True
-        if discard_pending:
-            while True:
-                try:
-                    self._chunk_queue.get_nowait()
-                except queue.Empty:
-                    break
-        self._chunk_queue.put(None)
-        worker.join(timeout=CAPTURE_STOP_TIMEOUT_SECONDS)
-        if worker.is_alive():
-            return False
-        self._chunk_worker = None
-        return True
-
-    def _finish_stream(
-        self,
-        *,
-        discard: bool,
-        flush_tail: bool,
-    ) -> tuple[np.ndarray, CaptureFailure | None]:
-        """Release exact native and worker state under the app owner lock."""
-        stream = self._stream
-        cleanup_failure: CaptureFailure | None = None
-        if stream is not None:
-            try:
-                stream.stop()
-            except Exception:
-                cleanup_failure = CaptureFailure.CLEANUP_FAILED
-            try:
-                stream.close()
-            except Exception:
-                cleanup_failure = CaptureFailure.CLEANUP_FAILED
-            else:
-                if self._stream is stream:
-                    self._stream = None
-
-        if self._chunk_buffer is not None:
-            if flush_tail and not discard:
-                tail = self._chunk_buffer.flush_tail()
-                if tail is not None and self._chunk_callback is not None:
-                    self._chunk_queue.put(tail)
-            self._chunk_buffer.reset()
-            self._chunk_buffer = None
-
-        if not self._stop_chunk_worker(discard_pending=discard):
-            cleanup_failure = CaptureFailure.TIMEOUT
-        if self._preview_ring is not None:
-            self._preview_ring.reset()
-            self._preview_ring = None
-
-        with self._frames_lock:
-            frames = tuple(self._frames)
-            self._frames.clear()
-        if discard or not frames:
-            audio = np.empty(0, dtype=np.float32)
-        elif len(frames) == 1:
-            audio = frames[0].copy()
-        else:
-            audio = np.concatenate(frames).astype(np.float32, copy=False)
-        return np.ascontiguousarray(audio.reshape(-1), dtype=np.float32), cleanup_failure
-
-    def _matches_active(self, session: CaptureSession) -> bool:
-        with self._state_lock:
-            return self._active_session == session
-
-    def stop_capture(self, session: CaptureSession) -> CaptureCompletion:
-        if not self._matches_active(session):
-            return CaptureCompletion(
-                request_id=session.request_id,
-                generation=session.generation,
-                status=CaptureCompletionStatus.FAILED,
-                failure=CaptureFailure.STALE_GENERATION,
-            )
-        with self._state_lock:
-            self._stopping = True
-            failure = self._active_failure
-        audio, cleanup_failure = self._finish_stream(
-            discard=False,
-            flush_tail=True,
-        )
-        failure = cleanup_failure or failure
-        if cleanup_failure is None:
-            with self._state_lock:
-                self._active_session = None
-                self._active_failure = None
-                self._stopping = False
-            self._legacy_session = None
-        if failure is not None:
-            return CaptureCompletion(
-                request_id=session.request_id,
-                generation=session.generation,
-                status=CaptureCompletionStatus.FAILED,
-                failure=failure,
-            )
-        return CaptureCompletion(
-            request_id=session.request_id,
-            generation=session.generation,
-            status=CaptureCompletionStatus.STOPPED,
-            audio=audio,
-        )
-
-    def cancel_capture(self, session: CaptureSession) -> CaptureCompletion:
-        if not self._matches_active(session):
-            return CaptureCompletion(
-                request_id=session.request_id,
-                generation=session.generation,
-                status=CaptureCompletionStatus.FAILED,
-                failure=CaptureFailure.STALE_GENERATION,
-            )
-        with self._state_lock:
-            self._stopping = True
-            failure = self._active_failure
-        _, cleanup_failure = self._finish_stream(
-            discard=True,
-            flush_tail=False,
-        )
-        failure = cleanup_failure or failure
-        if cleanup_failure is None:
-            with self._state_lock:
-                self._active_session = None
-                self._active_failure = None
-                self._stopping = False
-            self._legacy_session = None
-        if failure is not None:
-            return CaptureCompletion(
-                request_id=session.request_id,
-                generation=session.generation,
-                status=CaptureCompletionStatus.FAILED,
-                failure=failure,
-            )
-        return CaptureCompletion(
-            request_id=session.request_id,
-            generation=session.generation,
-            status=CaptureCompletionStatus.CANCELLED,
-        )
-
-    def arm_capture(self) -> None:
-        """Admit audio after the recording start cue has completed."""
-        self._capture_armed.set()
-
-    def start(self, *, discard_until_armed: bool = False) -> None:
-        if self.active_session is not None:
-            raise AudioCaptureError(CaptureFailure.NATIVE_ERROR)
-        if discard_until_armed:
-            self._capture_armed.clear()
-        else:
-            self._capture_armed.set()
-        self._generation += 1
-        selection = (
-            CaptureSelection(preferred_id=self._device_name)
-            if self._device_name.startswith("macos-input-")
-            else CaptureSelection(legacy_name=self._device_name or None)
-        )
-        outcome = self.start_capture(
-            CaptureRequest(
-                request_id=f"macos-capture-{self._generation}",
-                generation=self._generation,
-                selection=selection,
-            ),
-            on_level=self._level_callback,
-            on_chunk=self._chunk_callback,
-        )
-        if outcome.failure is not None:
-            raise AudioCaptureError(outcome.failure)
-        self._legacy_session = outcome.session
-
-    def stop(self) -> np.ndarray:
-        session = self._legacy_session or self.active_session
-        if session is None:
-            return np.empty(0, dtype=np.float32)
-        completion = self.stop_capture(session)
-        if completion.status is CaptureCompletionStatus.FAILED:
-            raise AudioCaptureError(completion.failure or CaptureFailure.NATIVE_ERROR)
-        assert completion.audio is not None
-        return completion.audio
-
-    def cancel(self) -> None:
-        session = self._legacy_session or self.active_session
-        if session is None:
-            self._finish_stream(discard=True, flush_tail=False)
-            return
-        completion = self.cancel_capture(session)
-        if completion.status is CaptureCompletionStatus.FAILED:
-            raise AudioCaptureError(completion.failure or CaptureFailure.NATIVE_ERROR)
-
-    def close(self) -> bool:
-        session = self.active_session
-        if session is not None:
-            completion = self.cancel_capture(session)
-            if self.active_session is not None:
-                logger.warning(
-                    "audio capture close incomplete reason=%s",
-                    completion.failure.value if completion.failure else "unknown",
-                )
-                return False
-        else:
-            _, cleanup_failure = self._finish_stream(
-                discard=True,
-                flush_tail=False,
-            )
-            if cleanup_failure is not None:
-                logger.warning(
-                    "audio capture close incomplete reason=%s",
-                    cleanup_failure.value,
-                )
-                return False
-        return not self.stream_open and not self.chunk_worker_alive
 
 
 AudioCapture = MacosCaptureAdapter

@@ -54,7 +54,7 @@ describe("ReportBugDialog", () => {
     const github = await screen.findByRole("button", { name: /Continue to GitHub Issues/ });
     expect(screen.getByRole("dialog", { name: "Logs saved" })).toBeInTheDocument();
     expect(screen.getByText(/GitHub attachments are public/)).toBeInTheDocument();
-    expect(github).toHaveFocus();
+    await waitFor(() => expect(github).toHaveFocus());
 
     fireEvent.click(github);
     expect(onOpenIssues).toHaveBeenCalledTimes(1);
