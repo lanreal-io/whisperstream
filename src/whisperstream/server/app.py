@@ -5705,7 +5705,7 @@ class WhisperstreamServer:
             # Audio lifecycle hardening (Task 4.5 / research Q5):
             # In-memory retention statement — verbatim from research Q5:
             #   "Raw audio lives in memory only for one recording. The chunk
-            #    buffer is bounded to ~20s (chunk_duration, 1s overlap); the
+            #    buffer is bounded to ~20s (chunk_duration, 2s overlap); the
             #    full waveform is transcribed fully in-memory (no temp file in
             #    the live mic path) and discarded, superseded at the next
             #    recording. Audio reaches disk only when both history_enabled

@@ -129,16 +129,18 @@ class TestMergeOverlappingTranscripts(unittest.TestCase):
         self.assertEqual(result, f"{phrase} {phrase}")
 
     def test_overlap_longer_than_seam_audio_is_not_removed(self):
-        """Matches longer than the 1s overlap can hold are treated as speech."""
-        from whisperstream.chunking import merge_overlapping_transcripts
+        """Exact repeats more than one word longer than the overlap can hold stay."""
+        from whisperstream.chunking import (
+            CHUNK_OVERLAP_SECONDS,
+            max_overlap_words,
+            merge_overlapping_transcripts,
+        )
 
-        result = merge_overlapping_transcripts(
-            ["we said one two three four five", "one two three four five again"]
+        phrase = " ".join(
+            f"w{i}" for i in range(max_overlap_words(CHUNK_OVERLAP_SECONDS) + 2)
         )
-        self.assertEqual(
-            result,
-            "we said one two three four five one two three four five again",
-        )
+        result = merge_overlapping_transcripts([f"we said {phrase}", f"{phrase} again"])
+        self.assertEqual(result, f"we said {phrase} {phrase} again")
 
     def test_seam_overlap_within_bound_still_deduplicated(self):
         """A four-word seam duplicate is still removed by default."""
@@ -148,6 +150,32 @@ class TestMergeOverlappingTranscripts(unittest.TestCase):
             ["and then we went to the", "we went to the store"]
         )
         self.assertEqual(result, "and then we went to the store")
+
+    def test_untimed_seam_variants_are_merged(self):
+        """Qwen/Cohere seams with punctuation, clipping or wording drift."""
+        from whisperstream.chunking import merge_overlapping_transcripts
+
+        cases = [
+            (["minimal investment tier?", "Tier. The video studio"],
+             "minimal investment tier? The video studio"),
+            (["you're paying for. You're", "You're paying for that utility"],
+             "you're paying for that utility"),
+            (["It's like a B two B.", "It's like a B to B target. Negotiate"],
+             "It's like a B to B target. Negotiate"),
+            (["may just end up being a research.", "Just end up being a rese like directory"],
+             "may just end up being a rese like directory"),
+        ]
+        for chunks, expected in cases:
+            with self.subTest(chunks=chunks):
+                self.assertEqual(merge_overlapping_transcripts(chunks, max_overlap=8), expected)
+
+    def test_untimed_unrelated_edges_are_joined(self):
+        from whisperstream.chunking import merge_overlapping_transcripts
+
+        self.assertEqual(
+            merge_overlapping_transcripts(["we went to the store", "after lunch we came home"]),
+            "we went to the store after lunch we came home",
+        )
 
     def test_max_overlap_words_follows_overlap_duration(self):
         from whisperstream.chunking import max_overlap_words
@@ -161,6 +189,148 @@ class TestMergeOverlappingTranscripts(unittest.TestCase):
 
         result = merge_overlapping_transcripts(["go go", "go go"], max_overlap=0)
         self.assertEqual(result, "go go go go")
+
+
+SR = 16000
+HOP = 19 * SR  # 20 s windows, 1 s overlap
+
+
+def _timed(start_s, end_s, words, *, aligned=True):
+    """Build a timed chunk from ``(word, absolute_start_seconds)`` pairs."""
+    from whisperstream.chunking import TimedChunkTranscript
+    from whisperstream.stt_contracts import DetailedTranscriptionResult
+
+    text = " ".join(w for w, _ in words)
+    if not aligned:
+        result = DetailedTranscriptionResult(text=text)
+    else:
+        # Split each word into two subword tokens, as Parakeet does.
+        tokens, times = [], []
+        for word, at in words:
+            rel = at - start_s
+            head, tail = word[:1], word[1:]
+            tokens.append(" " + head)
+            times.append(rel)
+            if tail:
+                tokens.append(tail)
+                times.append(rel + 0.04)
+        result = DetailedTranscriptionResult(
+            text=text, tokens=tuple(tokens), timestamps=tuple(times)
+        )
+    return TimedChunkTranscript(int(start_s * SR), int(end_s * SR), result)
+
+
+def _merge(*chunks):
+    from whisperstream.chunking import merge_timed_chunk_transcripts
+
+    return merge_timed_chunk_transcripts(list(chunks), sample_rate=SR)
+
+
+class TestMergeTimedChunkTranscripts(unittest.TestCase):
+    """Timing-aware seam ownership. Timings mirror real Parakeet replays,
+    where the later window places the same word 0.04-0.36 s later."""
+
+    def test_punctuation_variation_at_seam_is_one_word(self):
+        result = _merge(
+            _timed(0, 20, [("minimal", 18.9), ("investment", 19.3), ("tier?", 19.6)]),
+            _timed(19, 39, [("Tier.", 19.72), ("The", 20.8), ("video", 21.0)]),
+        )
+        self.assertEqual(result, "minimal investment tier? The video")
+
+    def test_recognition_variation_keeps_one_version(self):
+        result = _merge(
+            _timed(0, 20, [("you're", 18.88), ("paying", 19.12), ("for", 19.36), ("the", 19.6)]),
+            _timed(19, 39, [("Paying", 19.24), ("for", 19.64), ("that", 19.88), ("utility", 20.2)]),
+        )
+        self.assertEqual(result, "you're paying for that utility")
+
+    def test_overlap_longer_than_four_words_is_removed(self):
+        prev = [("have.", 18.48), ("It's", 18.8), ("like", 19.04), ("a", 19.12),
+                ("B2B", 19.2), ("target.", 19.68)]
+        nxt = [("It's", 19.0), ("like", 19.16), ("a", 19.24), ("B2B", 19.32),
+               ("target.", 19.96), ("Negotiated", 20.76), ("AI", 21.4)]
+        result = _merge(_timed(0, 20, prev), _timed(19, 39, nxt))
+        self.assertEqual(result, "have. It's like a B2B target. Negotiated AI")
+
+    def test_restart_with_clipped_edge_word_is_removed(self):
+        prev = [("may", 18.8), ("just", 19.04), ("end", 19.2), ("up", 19.28),
+                ("being", 19.36), ("a", 19.52), ("research.", 19.6)]
+        nxt = [("Just", 19.08), ("end", 19.32), ("up", 19.4), ("being", 19.56),
+               ("a", 19.64), ("rese", 19.72), ("like", 20.12), ("directory", 20.36)]
+        result = _merge(_timed(0, 20, prev), _timed(19, 39, nxt))
+        self.assertEqual(result, "may just end up being a rese like directory")
+
+    def test_phrase_spoken_twice_across_seam_is_kept(self):
+        """A phrase spoken twice across a seam survives: its occurrences sit at different times."""
+        phrase = "please send the quarterly report".split()
+        first = [(w, 17.0 + 0.3 * i) for i, w in enumerate(phrase)]   # 17.0-18.2
+        second = [(w, 19.3 + 0.3 * i) for i, w in enumerate(phrase)]  # 19.3-20.5
+        prev = first + second[:3]  # the earlier window ends at 20 s
+        nxt = [(w, t + 0.1) for w, t in second]
+        result = _merge(_timed(0, 20, prev), _timed(19, 39, nxt))
+        self.assertEqual(result, " ".join(phrase + phrase))
+
+    def test_repeat_entirely_after_seam_is_kept(self):
+        prev = [("go", 17.5), ("team", 17.8)]
+        nxt = [("go", 20.4), ("team", 20.7)]
+        result = _merge(_timed(0, 20, prev), _timed(19, 39, nxt))
+        self.assertEqual(result, "go team go team")
+
+    def test_stutter_inside_overlap_keeps_both_words(self):
+        prev = [("no,", 19.2), ("no,", 19.5), ("wait", 19.8)]
+        nxt = [("No,", 19.3), ("no,", 19.62), ("wait", 19.95), ("here", 20.4)]
+        result = _merge(_timed(0, 20, prev), _timed(19, 39, nxt))
+        self.assertEqual(result, "no, no, wait here")
+
+    def test_no_shared_anchor_uses_bounded_text_rule(self):
+        prev = [("alpha", 18.0), ("beta", 19.4)]
+        nxt = [("gamma", 19.5), ("delta", 20.5)]
+        self.assertEqual(
+            _merge(_timed(0, 20, prev), _timed(19, 39, nxt)),
+            "alpha beta gamma delta",
+        )
+
+    def test_empty_and_silent_windows(self):
+        self.assertEqual(_merge(), "")
+        self.assertEqual(_merge(_timed(0, 20, []), _timed(19, 39, [])), "")
+        result = _merge(
+            _timed(0, 20, [("hello", 18.0)]),
+            _timed(19, 39, []),
+            _timed(38, 40, [("world", 38.6)]),
+        )
+        self.assertEqual(result, "hello world")
+
+    def test_short_tail_of_only_shared_audio(self):
+        result = _merge(
+            _timed(0, 20, [("one", 18.6), ("two", 19.3), ("three", 19.7)]),
+            _timed(19, 20, [("two", 19.4), ("three", 19.8)]),
+        )
+        self.assertEqual(result, "one two three")
+
+    def test_unaligned_decode_uses_existing_text_merger(self):
+        from whisperstream.chunking import merge_overlapping_transcripts
+
+        chunks = [
+            _timed(0, 20, [("and", 18.0), ("then", 18.4), ("we", 19.2), ("went", 19.6)]),
+            _timed(19, 39, [("we", 19.3), ("went", 19.7), ("home", 20.2)], aligned=False),
+        ]
+        self.assertEqual(
+            _merge(*chunks),
+            merge_overlapping_transcripts([c.result.text for c in chunks]),
+        )
+
+    def test_mismatched_token_text_counts_as_unaligned(self):
+        from whisperstream.chunking import TimedChunkTranscript
+        from whisperstream.stt_contracts import DetailedTranscriptionResult
+
+        bad = TimedChunkTranscript(
+            HOP, HOP + 20 * SR,
+            DetailedTranscriptionResult(text="hello there", tokens=(" hello",), timestamps=(0.1,)),
+        )
+        self.assertEqual(
+            _merge(_timed(0, 20, [("say", 19.5), ("hello", 19.8)]), bad),
+            "say hello there",
+        )
 
 
 class TestChunkBuffer(unittest.TestCase):
@@ -277,6 +447,28 @@ class _FakeManager:
         return self._texts.pop(0)
 
 
+class _FakeTimedManager:
+    """Aligned manager: one word per chunk, timed at the chunk's first second."""
+
+    def __init__(self, final_alignment=True):
+        from whisperstream.stt_contracts import SttCapabilities
+
+        self.capabilities = SttCapabilities(final_alignment=final_alignment)
+        self.detailed_calls = 0
+        self.plain_calls = 0
+
+    def transcribe_chunk(self, audio, *, sample_rate):
+        self.plain_calls += 1
+        return "plain"
+
+    def transcribe_chunk_detailed(self, audio, *, sample_rate):
+        from whisperstream.stt_contracts import DetailedTranscriptionResult
+
+        self.detailed_calls += 1
+        word = f"w{self.detailed_calls}"
+        return DetailedTranscriptionResult(text=word, tokens=(" " + word,), timestamps=(2.0,))
+
+
 class TestTranscribeWaveform(unittest.TestCase):
     """Tests for transcribe_waveform() — the full-waveform chunked entry."""
 
@@ -311,12 +503,27 @@ class TestTranscribeWaveform(unittest.TestCase):
         n = len(mgr.chunk_sizes)
         self.assertEqual(result, " ".join(["a", "b", "c", "d", "e"][:n]))
 
+    def test_aligned_manager_uses_timed_decodes(self):
+        from whisperstream.chunking import transcribe_waveform
+
+        mgr = _FakeTimedManager()
+        result = transcribe_waveform(mgr, np.zeros(45 * SR, dtype=np.float32), SR)
+        self.assertEqual((mgr.detailed_calls, mgr.plain_calls), (3, 0))
+        self.assertEqual(result, "w1 w2 w3")
+
+    def test_unaligned_manager_keeps_text_path(self):
+        from whisperstream.chunking import transcribe_waveform
+
+        mgr = _FakeTimedManager(final_alignment=False)
+        transcribe_waveform(mgr, np.zeros(45 * SR, dtype=np.float32), SR)
+        self.assertEqual((mgr.detailed_calls, mgr.plain_calls), (0, 3))
+
     def test_uses_locked_constants_by_default(self):
         """Default chunk_duration/overlap come from the locked module constants."""
         from whisperstream import chunking
 
         self.assertEqual(chunking.CHUNK_DURATION_SECONDS, 20.0)
-        self.assertEqual(chunking.CHUNK_OVERLAP_SECONDS, 1.0)
+        self.assertEqual(chunking.CHUNK_OVERLAP_SECONDS, 2.0)
 
 
 if __name__ == "__main__":
