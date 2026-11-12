@@ -181,7 +181,7 @@ def test_installer_licence_page_is_the_gpl_in_nsis_format():
     config = json.loads((root / "src-tauri" / "tauri.conf.json").read_text(encoding="utf-8"))
     assert config["bundle"]["licenseFile"] == "resources/GPL-3.0.txt"
     page = (root / "src-tauri" / "resources" / "GPL-3.0.txt").read_bytes()
-    assert page == (root / "LICENSE").read_bytes().replace(b"\n", b"\r\n")
+    assert page == (root / "LICENSE").read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
     assert page.isascii() and not page.startswith(b"\xef\xbb\xbf")
     assert max(len(line) for line in page.split(b"\r\n")) <= 80
 

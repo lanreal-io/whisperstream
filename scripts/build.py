@@ -58,6 +58,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import _build_lib as b  # noqa: E402  (after sys.path tweak)
 from installer_profile import effective_windows_configuration, installer_profile  # noqa: E402
+from windows_signing import require_provider as require_windows_signing  # noqa: E402
 
 
 MICROSOFT_STORE_CONFIG = (
@@ -385,7 +386,8 @@ def _nuitka_argv(version: str, numeric: str, experimental: bool = False) -> list
 
 
 def _step_nuitka(
-    version: str, numeric: str, total: int, skip_nuitka: bool, experimental: bool = False
+    version: str, numeric: str, total: int, skip_nuitka: bool, experimental: bool = False,
+    *, signing_provider=None, signing_config=None,
 ) -> None:
     """Step 1: compile the Python sidecar with Nuitka (or skip it).
 
@@ -396,6 +398,8 @@ def _step_nuitka(
     """
     engine = b.REPO_ROOT / "dist" / "whisperstream-engine.exe"
     if skip_nuitka:
+        if signing_provider is not None:
+            signing_provider.verify_engine(engine)
         print(f"=== Step 1/{total}: Build Python sidecar with Nuitka (SKIPPED via --skip-nuitka) ===")
         if not engine.is_file():
             print(
@@ -413,7 +417,11 @@ def _step_nuitka(
         return
 
     print(f"=== Step 1/{total}: Build Python sidecar with Nuitka ===")
-    b.run(_nuitka_argv(version, numeric, experimental))
+    argv = _nuitka_argv(version, numeric, experimental)
+    if signing_provider is None:
+        b.run(argv)
+    else:
+        signing_provider.compile_engine(signing_config, argv, engine)
 
 
 # ---------------------------------------------------------------------------
@@ -434,9 +442,16 @@ def _step_smoke_and_sign(cfg, total: int, unsigned: bool = False) -> Path:
         The path to the smoke-tested (and optionally signed) dist/whisperstream-engine.exe.
     """
     engine = b.REPO_ROOT / "dist" / "whisperstream-engine.exe"
+    provider = None if unsigned else require_windows_signing()
+    records = None if provider is None else provider.verify_engine(engine)
     print("")
     print(f"=== Step 2/{total}: Smoke test sidecar ===")
     b.run([str(engine), "--check"])
+
+    if provider is not None:
+        provider.verify_extracted_engine(
+            engine, Path(os.environ["LOCALAPPDATA"]) / "Whisperstream-runtime" / b.read_tauri_version()
+        )
 
     if unsigned:
         print("Signing whisperstream-engine.exe SKIPPED (--unsigned).")
@@ -445,6 +460,7 @@ def _step_smoke_and_sign(cfg, total: int, unsigned: bool = False) -> Path:
     print("")
     print("Signing whisperstream-engine.exe...")
     b.sign_file(cfg, engine, "Whisperstream Engine")
+    provider.finalize_engine(engine, records)
     return engine
 
 
@@ -637,6 +653,7 @@ def _step_tauri_nsis(
     total: int,
     experimental: bool = False,
     microsoft_store: bool = False,
+    signing_overlay: str | None = None,
 ) -> None:
     """Step 9 (NSIS): build the signed Tauri NSIS installer.
 
@@ -659,6 +676,8 @@ def _step_tauri_nsis(
     ]
     if microsoft_store:
         argv.extend(["--config", str(MICROSOFT_STORE_CONFIG)])
+    if signing_overlay is not None:
+        argv.extend(["--config", signing_overlay])
     # Compile and all beforeBuild/dependency hooks run without credentials.
     compile_argv = [*argv, "--no-bundle", "--config", '{"bundle":{"windows":{"signCommand":null}}}']
     b.run(
@@ -855,7 +874,7 @@ def _verify_microsoft_store_pe_signatures(installer: Path) -> list[Path]:
 def _store_extractor() -> str:
     extractor = os.environ.get("SEVEN_ZIP") or shutil.which("7z")
     if not extractor:
-        raise MicrosoftStorePackageError("Set SEVEN_ZIP to a 7-Zip executable for the Store payload audit")
+        raise MicrosoftStorePackageError("Set SEVEN_ZIP to a 7-Zip executable for the installed-payload signature audit")
     return extractor
 
 
@@ -1246,6 +1265,9 @@ def _run_build(
         b.validate_legal_release_documents(source_only=True)
         b.require_updater_provider()
         b.validate_updater_release_policy()
+        windows_signing = require_windows_signing()
+        if not portable:
+            _store_extractor()  # All official installers audit their installed payload.
 
     version = b.read_tauri_version()
 
@@ -1345,7 +1367,8 @@ def _run_build(
             # Default always-signed path: wrap in signing overlay context manager.
             with b.signing_overlay(cfg.endpoint, cfg.account, cfg.profile) as overlay:
                 # Step 1: Nuitka onefile compile (or skip).
-                _step_nuitka(version, numeric, total, skip_nuitka, experimental)
+                _step_nuitka(version, numeric, total, skip_nuitka, experimental,
+                             signing_provider=windows_signing, signing_config=cfg)
                 # Step 2: smoke test + manual sidecar sign.
                 _step_smoke_and_sign(cfg, total)
                 # Step 3: bundled legal documents.
@@ -1363,6 +1386,9 @@ def _run_build(
                 cli_compiled = _step_build_cli(total)
                 # Step 9: sign and stage whisperstream-cli.
                 _step_sign_and_stage_cli(cfg, total, cli_compiled)
+                # Cover external native resources too, including llama.cpp DLLs.
+                engine = b.REPO_ROOT / "dist" / "whisperstream-engine.exe"
+                windows_signing.sign_paths(cfg, _microsoft_store_pe_paths(engine))
                 # Step 10: build frontend.
                 _step_build_frontend(total)
                 # Step 11: Tauri build (+ latest.json for NSIS).
@@ -1375,7 +1401,10 @@ def _run_build(
                         total,
                         experimental,
                         microsoft_store=microsoft_store,
+                        signing_overlay=windows_signing.nsis_overlay(),
                     )
+                    installer = b.REPO_ROOT / "src-tauri/target/release/bundle/nsis" / f"Whisperstream_{version}_x64-setup.exe"
+                    windows_signing.audit_installer(installer, engine, _store_extractor())
                     if microsoft_store:
                         _stage_microsoft_store_artifact(version, total, signed=True)
                     else:
