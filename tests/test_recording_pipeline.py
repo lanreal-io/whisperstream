@@ -1311,6 +1311,84 @@ def test_finalize_no_model_broadcasts_transcribing_false(_make_app) -> None:
     assert {"type": "state.transcribing", "active": False} in broadcasts
 
 
+def test_finalize_waits_for_startup_load_and_transcribes_held_audio(
+    _make_app,
+) -> None:
+    """Audio recorded before the startup model is ready is held, not dropped."""
+    app = _make_app()
+    waveform = np.full(16000, 0.25, dtype=np.float32)
+    app._last_waveform = waveform
+    app._chunk_futures = []
+    app.stt_engine = None
+    load_done = threading.Event()
+    app._stt_startup_load_done = load_done
+    manager = MagicMock(name="startup_manager")
+    manager.transcribe.return_value = "held audio result"
+
+    def _finish_startup_load() -> None:
+        app.stt_engine = manager
+        load_done.set()
+
+    timer = threading.Timer(0.05, _finish_startup_load)
+    timer.start()
+    try:
+        app._finalize_transcription_and_inject()
+    finally:
+        timer.cancel()
+
+    manager.transcribe.assert_called_once()
+    np.testing.assert_array_equal(manager.transcribe.call_args[0][0], waveform)
+    app.text_injector.inject.assert_called_once()
+
+
+def test_finalize_does_not_wait_when_no_startup_load_is_pending(_make_app) -> None:
+    """A missing model (onboarding) keeps the immediate skip."""
+    app = _make_app()
+    app._last_waveform = np.zeros(16000, dtype=np.float32)
+    app._chunk_futures = []
+    app.stt_engine = None
+    finished = threading.Event()
+    finished.set()
+    app._stt_startup_load_done = finished
+    broadcasts = []
+    app._broadcast = broadcasts.append
+
+    app._finalize_transcription_and_inject()
+
+    assert {"type": "state.transcribing", "active": True} not in broadcasts
+    assert {"type": "state.transcribing", "active": False} in broadcasts
+    app.text_injector.inject.assert_not_called()
+
+
+def test_recording_started_before_model_holds_whole_waveform(_make_app) -> None:
+    """Chunks are deferred and the full recording is transcribed once at stop."""
+    app = _make_app()
+    app.stt_engine = None
+    load_done = threading.Event()
+    app._stt_startup_load_done = load_done
+    manager = MagicMock(name="startup_manager")
+    manager.transcribe.return_value = "whole recording"
+
+    with patch("whisperstream.main.screen_reader_active", return_value=False):
+        assert app._start_recording() is True
+        assert app._recording_awaits_model is True
+        # Startup load completes mid-recording.
+        app.install_stt_manager(manager, app.config)
+        load_done.set()
+        app._on_chunk_ready(np.zeros(16000, dtype=np.float32))
+        assert app._chunk_futures == []
+        app._stop_recording()
+
+    app._executor.submit(lambda: None).result(timeout=5)
+    if app._idle_timer is not None:
+        app._idle_timer.cancel()
+
+    manager.transcribe_chunk.assert_not_called()
+    manager.transcribe.assert_called_once()
+    assert manager.transcribe.call_args[0][0].size == 16000
+    app.text_injector.inject.assert_called_once()
+
+
 def test_dictation_lifecycle_is_versioned_correlated_and_keeps_legacy_events(
     _make_app,
 ) -> None:

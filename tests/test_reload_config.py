@@ -404,6 +404,26 @@ def test_install_stt_manager_rejects_active_dictation_without_swapping(
     new_manager.shutdown.assert_called_once_with()
 
 
+def test_install_stt_manager_attaches_first_manager_during_dictation(
+    patched_app,
+) -> None:
+    """Startup load finishing mid-recording must install, not discard, the model.
+
+    With no live manager nothing in flight can be redirected; the recording is
+    holding its audio for this install.
+    """
+    app, _old_manager = patched_app
+    app.stt_engine = None
+    new_manager = MagicMock(name="new_manager")
+    target = app.config
+    app._dictation_state = {**app._dictation_state, "phase": "recording"}
+
+    app.install_stt_manager(new_manager, target)
+
+    assert app.parakeet is new_manager
+    new_manager.shutdown.assert_not_called()
+
+
 def test_failed_activation_restores_complete_prior_routing_state(
     patched_app,
 ) -> None:
