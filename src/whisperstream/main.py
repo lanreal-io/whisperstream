@@ -38,7 +38,11 @@ from .app_context_contract import (
 from .chunking import (
     CHUNK_DURATION_SECONDS,
     CHUNK_OVERLAP_SECONDS,
+    TimedChunkTranscript,
+    chunk_hop_samples,
     merge_overlapping_transcripts,
+    merge_timed_chunk_transcripts,
+    supports_timed_chunks,
 )
 from .cleanup_chunker import (
     PRODUCTION_FIRST_TARGET_WORDS as _CHUNK_FIRST_TARGET_WORDS,
@@ -3234,6 +3238,7 @@ class WhisperstreamApp:
 
         # Clean slate for the new recording's chunking state.
         self._chunk_futures = []
+        self._chunk_next_start_sample = 0
         self._chunk_start_time = 0.0
         self._last_waveform = None
 
@@ -3433,6 +3438,11 @@ class WhisperstreamApp:
             chunk_lock = threading.Lock()
             self._chunk_futures_lock = chunk_lock
         with chunk_lock:
+            # Capture emits ChunkBuffer windows in order, each one hop after the
+            # last. Count every arrival, including skipped ones, so a chunk's
+            # recording position never depends on which earlier chunks ran.
+            start_sample = getattr(self, "_chunk_next_start_sample", 0)
+            self._chunk_next_start_sample = start_sample + chunk_hop_samples(16_000)
             if (getattr(self, "_discarding_recording", False)
                     or getattr(self, "_shutting_down", False)
                     or getattr(self, "_recording", True) is False):
@@ -3456,7 +3466,7 @@ class WhisperstreamApp:
             # Capture the recognizer with the future. A model swap after this
             # callback must not redirect an already-recorded authoritative chunk.
             future = self._executor.submit(
-                self._transcribe_chunk_worker, stt_manager, chunk, grant
+                self._transcribe_chunk_worker, stt_manager, chunk, grant, start_sample
             )
             self._chunk_futures.append(future)
 
@@ -3465,8 +3475,13 @@ class WhisperstreamApp:
         stt_manager,
         chunk: np.ndarray,
         acceptance_grant: AcceptanceGrant | None = None,
-    ) -> str | None:
-        """Run in the executor; transcribes a single chunk and returns the text."""
+        start_sample: int | None = None,
+    ) -> str | TimedChunkTranscript | None:
+        """Run in the executor; transcribe one chunk.
+
+        Recognizers with final alignment return a positioned timed decode so
+        the finalizer can own each moment of shared audio once; others return text.
+        """
         # ============================================================================
         # TRANSCRIPT DATA — DO NOT LOG
         # MAKE SURE you do not log transcript data anywhere. If you add a new function
@@ -3479,7 +3494,16 @@ class WhisperstreamApp:
             return None
         try:
             t0 = time.perf_counter()
-            text = stt_manager.transcribe_chunk(chunk, sample_rate=16_000)
+            timed: TimedChunkTranscript | None = None
+            if start_sample is not None and supports_timed_chunks(stt_manager):
+                timed = TimedChunkTranscript(
+                    start_sample,
+                    start_sample + chunk.size,
+                    stt_manager.transcribe_chunk_detailed(chunk, sample_rate=16_000),
+                )
+                text = timed.result.text
+            else:
+                text = stt_manager.transcribe_chunk(chunk, sample_rate=16_000)
             if not self._require_acceptance(acceptance_grant):
                 return None
             elapsed = time.perf_counter() - t0
@@ -3490,7 +3514,7 @@ class WhisperstreamApp:
                 word_count=len(text.split()) if text.strip() else 0,
                 level=logging.DEBUG,
             )
-            return text
+            return timed if timed is not None else text
         except Exception as exc:
             self.logger.error(
                 "chunk transcription failed error_type=%s", type(exc).__name__
@@ -4027,7 +4051,7 @@ class WhisperstreamApp:
             return
 
         # Collect results in order.
-        chunks: list[str] = []
+        chunks: list[str | TimedChunkTranscript] = []
         for i, future in enumerate(chunk_futures):
             try:
                 result = future.result()
@@ -4055,7 +4079,13 @@ class WhisperstreamApp:
         if not self._require_acceptance(grant):
             self._broadcast({"type": "state.transcribing", "active": False})
             return
-        text = merge_overlapping_transcripts(chunks)
+        if all(isinstance(chunk, TimedChunkTranscript) for chunk in chunks):
+            text = merge_timed_chunk_transcripts(chunks, sample_rate=16_000)
+        else:
+            text = merge_overlapping_transcripts([
+                chunk.result.text if isinstance(chunk, TimedChunkTranscript) else chunk
+                for chunk in chunks
+            ])
         duration = time.perf_counter() - start_time
         self._last_stt_failure = None
         self._broadcast({"type": "state.transcribing", "active": False})

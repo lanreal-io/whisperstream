@@ -1205,6 +1205,75 @@ def test_finalize_merges_chunk_results(_make_app) -> None:
         assert word in injected_text, f"Missing word {word!r} in {injected_text!r}"
 
 
+def test_aligned_chunks_carry_recording_positions_including_skipped(_make_app) -> None:
+    """Chunk k starts at k hops even when an earlier chunk was skipped."""
+    from whisperstream.chunking import TimedChunkTranscript, chunk_hop_samples
+    from whisperstream.stt_contracts import DetailedTranscriptionResult, SttCapabilities
+
+    class AlignedManager:
+        capabilities = SttCapabilities(final_alignment=True)
+
+        def transcribe_chunk_detailed(self, audio, *, sample_rate):
+            return DetailedTranscriptionResult(text="word", tokens=(" word",), timestamps=(0.5,))
+
+    app = _make_app()
+    app._recording = True
+    app._recording_stt_manager = AlignedManager()
+    app._chunk_next_start_sample = 0
+    app._chunk_futures = []
+    chunk = np.zeros(20 * 16_000, dtype=np.float32)
+
+    app._on_chunk_ready(chunk)
+    app._discarding_recording = True
+    app._on_chunk_ready(chunk)  # skipped, but still occupies its window
+    app._discarding_recording = False
+    app._on_chunk_ready(chunk)
+
+    results = [future.result(timeout=5) for future in app._chunk_futures]
+    hop = chunk_hop_samples(16_000)
+    assert all(isinstance(result, TimedChunkTranscript) for result in results)
+    assert [(r.start_sample, r.end_sample) for r in results] == [
+        (0, chunk.size),
+        (2 * hop, 2 * hop + chunk.size),
+    ]
+
+
+def test_finalize_merges_timed_chunks_by_seam_ownership(_make_app) -> None:
+    """Punctuation and recognition differences at a seam leave no echo."""
+    from whisperstream.chunking import TimedChunkTranscript, chunk_hop_samples
+    from whisperstream.stt_contracts import DetailedTranscriptionResult
+
+    def timed(start, words):
+        return TimedChunkTranscript(
+            start,
+            start + 20 * 16_000,
+            DetailedTranscriptionResult(
+                text=" ".join(w for w, _ in words),
+                tokens=tuple(" " + w for w, _ in words),
+                timestamps=tuple(t for _, t in words),
+            ),
+        )
+
+    hop = chunk_hop_samples(16_000)
+    futures = []
+    for result in (
+        timed(0, [("paying", 19.12), ("for", 19.36), ("the", 19.6)]),
+        timed(hop, [(w, t - hop / 16_000) for w, t in (
+            ("Paying", 19.24), ("for", 19.64), ("that", 19.88), ("tier?", 21.0))]),
+    ):
+        future = concurrent.futures.Future()
+        future.set_result(result)
+        futures.append(future)
+
+    app = _make_app()
+    app._chunk_futures = futures
+    app._last_waveform = np.zeros(16000, dtype=np.float32)
+    app._finalize_transcription_and_inject()
+
+    app.text_injector.inject.assert_called_once()
+    assert app.text_injector.inject.call_args[0][0].startswith("paying for that tier?")
+
+
 # ── Test 6: _finalize with no chunks falls back to single-shot ─────────
 
 
