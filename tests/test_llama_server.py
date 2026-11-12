@@ -1514,3 +1514,55 @@ async def test_other_platform_launch_retains_asyncio_process():
         assert process is ordinary.return_value
         ordinary.assert_awaited_once_with("server", cwd="runtime")
         spawn.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_dictation_hold_survives_warmup_reconfiguration_and_queued_expiry(tmp_path):
+    from whisperstream.llama_server import LlamaServerSupervisor
+
+    supervisor = LlamaServerSupervisor(
+        tmp_path / 'model.gguf', binary_path=tmp_path / 'llama-server',
+        idle_timeout_seconds=600,
+    )
+    supervisor._loop = asyncio.get_running_loop()
+    supervisor._process = _make_mock_process(returncode=None)
+    with patch('threading.Timer') as timer:
+        supervisor.mark_active()
+        expired = supervisor._idle_generation
+        supervisor._on_idle_expired(expired)
+        supervisor.begin_dictation()
+        timer.reset_mock()
+        with patch.object(supervisor, '_warmup_inference', new=AsyncMock()):
+            assert await supervisor.ensure_ready()
+        supervisor.set_idle_timeout(30)
+        supervisor.mark_active()
+        supervisor._on_idle_expired()
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        timer.assert_not_called()
+        supervisor._process.terminate.assert_not_called()
+        assert supervisor.is_ready
+
+        supervisor.begin_dictation()
+        supervisor.end_dictation()
+        timer.assert_not_called()
+        supervisor.end_dictation()
+        timer.assert_called_once()
+        assert timer.call_args.args[0] == 30
+        timer.return_value.start.assert_called_once()
+        supervisor.end_dictation()  # duplicate release must not extend idle time
+        timer.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_dictation_hold_does_not_block_explicit_shutdown(tmp_path):
+    from whisperstream.llama_server import LlamaServerSupervisor
+
+    supervisor = LlamaServerSupervisor(
+        tmp_path / 'model.gguf', binary_path=tmp_path / 'llama-server',
+    )
+    process = _make_mock_process(returncode=None)
+    supervisor._process = process
+    supervisor.begin_dictation()
+    await supervisor.stop()
+    process.terminate.assert_called_once()
