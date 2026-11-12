@@ -29,6 +29,7 @@ from whisperstream.macos_delivery_adapter import (
     MacosDeliveryAdapter,
     _NativeMacosDeliveryBridge,
     _NativeTarget,
+    _CG_PASTE_FLAGS,
     _SYNTHETIC_EVENT_MARKER,
 )
 from whisperstream.macos_shortcuts import (
@@ -157,8 +158,7 @@ class _Bridge:
         self.pasteboard = "synthetic-prior-pasteboard"
         self.pasteboard_reads = 0
         self.pasteboard_writes: list[str] = []
-        self.held: tuple[int, ...] = ()
-        self.physical: set[int] = set()
+        self.key_flags: list[int | None] = []
         self.events: list[tuple[object, ...]] = []
         self.v_down_attempts = 0
         self.fail_v_down_at: int | None = None
@@ -185,18 +185,13 @@ class _Bridge:
         self.pasteboard = value
         self.pasteboard_writes.append(value)
 
-    def held_modifier_keycodes(self) -> tuple[int, ...]:
-        return self.held
-
-    def modifier_physically_down(self, keycode: int) -> bool:
-        return keycode in self.physical
-
     def post_key(self, keycode: int, pressed: bool, *, flags: int | None = None) -> None:
         if keycode == 9 and pressed:
             self.v_down_attempts += 1
             if self.fail_v_down_at == self.v_down_attempts:
                 raise RuntimeError("synthetic event rejection")
         self.events.append(("key", keycode, pressed))
+        self.key_flags.append(flags)
 
     def post_unicode(self, value: str) -> None:
         self.unicode_attempts += 1
@@ -351,10 +346,8 @@ def test_permission_revocation_after_resolution_fails_without_pasteboard_access(
     assert bridge.events == []
 
 
-def test_clipboard_command_v_restores_and_balances_physical_modifier() -> None:
+def test_clipboard_paste_posts_only_flagged_v_without_touching_modifiers() -> None:
     adapter, bridge, keyboard, timers, _ = _adapter()
-    bridge.held = (56,)
-    bridge.physical = {56}
     request = _request(
         adapter,
         request_id="mac-command-v",
@@ -368,17 +361,12 @@ def test_clipboard_command_v_restores_and_balances_physical_modifier() -> None:
     assert receipt.status is DeliveryStatus.FOCUSED_ATTEMPTED
     assert (receipt.units_attempted, receipt.units_completed) == (1, 1)
     assert bridge.pasteboard == "synthetic-command-v-payload"
-    assert bridge.events == [
-        ("key", 56, False),
-        ("key", 55, True),
-        ("key", 9, True),
-        ("key", 9, False),
-        ("key", 55, False),
-        ("key", 56, True),
-    ]
-    assert keyboard.suppression_entries == 1
+    # A held shortcut key is neither released nor pressed again, and no
+    # Command key events are posted: V carries Command in its own flags.
+    assert bridge.events == [("key", 9, True), ("key", 9, False)]
+    assert bridge.key_flags == [_CG_PASTE_FLAGS, _CG_PASTE_FLAGS]
+    assert keyboard.suppression_entries == 0
     assert adapter.pending_restore_count == 1
-    assert adapter.synthetic_modifier_count == 1
     assert timers.items[0].started is True
 
     timers.items[0].fire()
@@ -386,8 +374,7 @@ def test_clipboard_command_v_restores_and_balances_physical_modifier() -> None:
     assert bridge.pasteboard == "synthetic-prior-pasteboard"
     assert adapter.pending_restore_count == 0
     adapter.close()
-    assert bridge.events[-1] == ("key", 56, False)
-    assert adapter.synthetic_modifier_count == 0
+    assert bridge.events == [("key", 9, True), ("key", 9, False)]
 
 
 def test_direct_typing_preserves_unicode_submits_and_never_reads_pasteboard() -> None:
@@ -417,11 +404,12 @@ def test_direct_typing_preserves_unicode_submits_and_never_reads_pasteboard() ->
         ("key", 36, True),
         ("key", 36, False),
     ]
+    assert bridge.key_flags == [0, 0]
     assert bridge.pasteboard_reads == 0
     assert bridge.pasteboard_writes == []
     assert sleep_calls == [0.003, 0.003, 0.003, 0.003]
     assert timers.items == []
-    assert keyboard.suppression_entries == 1
+    assert keyboard.suppression_entries == 0
 
 
 def test_target_loss_before_delivery_and_focus_loss_after_copy_are_explicit() -> None:
@@ -489,10 +477,8 @@ def test_process_identity_mismatch_is_typed_before_clipboard_or_input() -> None:
     assert bridge.events == []
 
 
-def test_input_failure_releases_command_and_balances_owned_modifiers() -> None:
+def test_input_failure_posts_no_modifier_events_and_is_not_retried() -> None:
     bridge = _Bridge()
-    bridge.held = (56,)
-    bridge.physical = {56}
     bridge.fail_v_down_at = 1
     adapter, bridge, _, timers, _ = _adapter(bridge=bridge)
     request = _request(
@@ -507,16 +493,9 @@ def test_input_failure_releases_command_and_balances_owned_modifiers() -> None:
 
     assert receipt.status is DeliveryStatus.FOCUSED_ATTEMPTED
     assert receipt.units_completed == 0
-    assert bridge.events == [
-        ("key", 56, False),
-        ("key", 55, True),
-        ("key", 55, False),
-        ("key", 56, True),
-    ]
-    assert adapter.synthetic_modifier_count == 1
+    assert bridge.events == []
+    assert bridge.v_down_attempts == 1
     adapter.close()
-    assert bridge.events[-1] == ("key", 56, False)
-    assert adapter.synthetic_modifier_count == 0
     assert all(timer.cancelled for timer in timers.items)
     assert bridge.pasteboard == "synthetic-prior-pasteboard"
 
@@ -770,10 +749,8 @@ def test_clipboard_copy_failure_remains_best_effort() -> None:
     assert write_bridge.events == []
 
 
-def test_close_cancels_batch_timer_targets_and_owned_modifiers() -> None:
+def test_close_cancels_batch_timer_and_targets() -> None:
     adapter, bridge, _, timers, _ = _adapter()
-    bridge.held = (59,)
-    bridge.physical = {59}
     first = _request(
         adapter,
         request_id="mac-pending-restore",
@@ -803,7 +780,6 @@ def test_close_cancels_batch_timer_targets_and_owned_modifiers() -> None:
     assert adapter.pending_restore_count == 0
     assert adapter.active_batch_count == 0
     assert adapter.target_count == 0
-    assert adapter.synthetic_modifier_count == 0
     assert adapter.close() is None
     assert (
         adapter.resolve_target("after-close", 1, DeliveryRoute.FOCUSED).failure
@@ -859,6 +835,7 @@ def test_native_command_v_sets_flags_before_post_without_global_state_dependency
             events[event - 1]["flags"] = flags
         def CGEventPost(self, tap, event):
             assert events[event - 1]["flags"] is not None
+            assert tap == 1  # kCGSessionEventTap, never the HID stream
             if reject_v_down and events[event - 1]["key"] == 9 and events[event - 1]["down"]:
                 raise RuntimeError("synthetic post failure")
     bridge = object.__new__(_NativeMacosDeliveryBridge)
@@ -871,10 +848,9 @@ def test_native_command_v_sets_flags_before_post_without_global_state_dependency
             adapter._send_command_v()
     else:
         adapter._send_command_v()
-    expected = [(55, True, 1 << 20), (9, True, 1 << 20)]
+    expected = [(9, True, _CG_PASTE_FLAGS)]
     if not reject_v_down:
-        expected.append((9, False, 1 << 20))
-    expected.append((55, False, 0))
+        expected.append((9, False, _CG_PASTE_FLAGS))
     assert [(e["key"], e["down"], e["flags"]) for e in events] == expected
     assert all(e["marker"] == _SYNTHETIC_EVENT_MARKER for e in events)
 

@@ -21,9 +21,9 @@ import logging
 import threading
 import time
 import uuid
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Callable, ContextManager, Protocol
+from typing import Callable, Protocol
 
 from .delivery_contract import (
     DeliveryClaimLedger,
@@ -42,13 +42,14 @@ from .permission_contract import PermissionKind, PermissionReport, PermissionSta
 
 
 
-_COMMAND_KEYCODE = 55
 _V_KEYCODE = 9
-_CG_COMMAND_FLAG = 1 << 20
+# Command plus the left-Command device bit, as a physical left-Command chord
+# reports it; some toolkits read the device bit rather than the family flag.
+_CG_PASTE_FLAGS = (1 << 20) | 0x00000008
 _RETURN_KEYCODE = 36
-_MODIFIER_KEYCODES = (54, 55, 56, 57, 58, 59, 60, 61, 62)
-_CG_HID_EVENT_TAP = 0
-_CG_HID_SYSTEM_STATE = 1
+# Injected input enters the login session rather than the HID stream, so it
+# never changes hardware modifier state or reaches the hotkey tap as a key.
+_CG_SESSION_EVENT_TAP = 1
 _CG_EVENT_SOURCE_USER_DATA = 42
 _SYNTHETIC_EVENT_MARKER = 0x5753485354524D31  # ``WSHSTRM1``
 _CF_STRING_ENCODING_UTF8 = 0x08000100
@@ -68,10 +69,6 @@ class _MacosDeliveryBridge(Protocol):
     def read_pasteboard_text(self) -> str | None: ...
 
     def write_pasteboard_text(self, value: str) -> None: ...
-
-    def held_modifier_keycodes(self) -> tuple[int, ...]: ...
-
-    def modifier_physically_down(self, keycode: int) -> bool: ...
 
     def post_key(self, keycode: int, pressed: bool, *, flags: int | None = None) -> None: ...
 
@@ -385,18 +382,6 @@ class _NativeMacosDeliveryBridge:
             if not written:
                 raise RuntimeError("pasteboard write failed")
 
-    def held_modifier_keycodes(self) -> tuple[int, ...]:
-        return tuple(
-            keycode
-            for keycode in _MODIFIER_KEYCODES
-            if self.modifier_physically_down(keycode)
-        )
-
-    def modifier_physically_down(self, keycode: int) -> bool:
-        return bool(
-            self._cg.CGEventSourceKeyState(_CG_HID_SYSTEM_STATE, keycode)
-        )
-
     def _post_event(self, keycode: int, pressed: bool, value: str | None, *, flags: int | None = None) -> None:
         event = int(
             self._cg.CGEventCreateKeyboardEvent(None, keycode, pressed) or 0
@@ -421,7 +406,7 @@ class _NativeMacosDeliveryBridge:
                     len(units),
                     units,
                 )
-            self._cg.CGEventPost(_CG_HID_EVENT_TAP, event)
+            self._cg.CGEventPost(_CG_SESSION_EVENT_TAP, event)
         finally:
             self._cf.CFRelease(event)
 
@@ -526,7 +511,6 @@ class MacosDeliveryAdapter:
         self._receipts: dict[tuple[str, int], DeliveryReceipt] = {}
         self._batches: dict[str, _BatchState] = {}
         self._pending_restores: list[_PendingClipboardRestore] = []
-        self._synthetic_modifiers: set[int] = set()
         self._cancelled_requests: set[tuple[str, int]] = set()
         self._closing = False
         self._closed = False
@@ -573,11 +557,6 @@ class MacosDeliveryAdapter:
     def target_count(self) -> int:
         with self._state_lock:
             return len(self._targets)
-
-    @property
-    def synthetic_modifier_count(self) -> int:
-        with self._state_lock:
-            return len(self._synthetic_modifiers)
 
     def _permission_failure(self) -> DeliveryFailure | None:
         try:
@@ -1047,11 +1026,10 @@ class MacosDeliveryAdapter:
                     True,
                 )
 
-        held, _modifier_snapshot_known = self._snapshot_modifiers(
-            wait_for_modifiers
-        )
+        # Injected events carry explicit flags, so a shortcut key the user is
+        # still holding neither alters them nor needs releasing first.
+        del wait_for_modifiers
         input_result = self._send_input(
-            held,
             style=style,
             processed_text=processed_text,
             submit=submit,
@@ -1079,44 +1057,12 @@ class MacosDeliveryAdapter:
         modifiers_restored: bool = True
         warnings: list[DeliveryWarning] = field(default_factory=list)
 
-    def _snapshot_modifiers(
-        self, wait_for_modifiers: bool
-    ) -> tuple[tuple[int, ...], bool]:
-        try:
-            held_before = tuple(self._native_bridge().held_modifier_keycodes())
-        except Exception:  # noqa: BLE001
-            return (), False
-        if not wait_for_modifiers or not held_before:
-            return held_before, True
-        self._sleep(0.25)
-        try:
-            held = tuple(self._native_bridge().held_modifier_keycodes())
-        except Exception:  # noqa: BLE001
-            return held_before, False
-        for keycode in held_before:
-            if keycode not in held:
-                self._logger.info("modifier guard released")
-        for _keycode in held:
-            self._logger.warning("modifier guard timeout")
-        return held, True
-
-    def _suppression_context(self) -> ContextManager[None]:
-        suppressor = getattr(self._keyboard, "suppress_self_events", None)
-        if not callable(suppressor):
-            return nullcontext()
-        return suppressor()
-
     def _send_command_v(self) -> None:
+        # Paste is an application shortcut: V carries Command in its own flags.
+        # No Command key events are posted, so modifier state never changes.
         bridge = self._native_bridge()
-        command_down = False
-        try:
-            bridge.post_key(_COMMAND_KEYCODE, True, flags=_CG_COMMAND_FLAG)
-            command_down = True
-            bridge.post_key(_V_KEYCODE, True, flags=_CG_COMMAND_FLAG)
-            bridge.post_key(_V_KEYCODE, False, flags=_CG_COMMAND_FLAG)
-        finally:
-            if command_down:
-                bridge.post_key(_COMMAND_KEYCODE, False, flags=0)
+        bridge.post_key(_V_KEYCODE, True, flags=_CG_PASTE_FLAGS)
+        bridge.post_key(_V_KEYCODE, False, flags=_CG_PASTE_FLAGS)
 
     def _send_direct_text(self, processed_text: str) -> None:
         bridge = self._native_bridge()
@@ -1127,7 +1073,6 @@ class MacosDeliveryAdapter:
 
     def _send_input(
         self,
-        held: tuple[int, ...],
         *,
         style: DeliveryStyle,
         processed_text: str,
@@ -1140,63 +1085,21 @@ class MacosDeliveryAdapter:
         result = self._InputResult()
         bridge = self._native_bridge()
         try:
-            with self._suppression_context():
-                release_failed = False
-                for keycode in held:
-                    try:
-                        bridge.post_key(keycode, False)
-                    except Exception:  # noqa: BLE001
-                        release_failed = True
-                        result.modifiers_restored = False
-                        result.warnings.append(
-                            DeliveryWarning.MODIFIER_RESTORE_FAILED
-                        )
-                try:
-                    if not release_failed:
-                        if style is DeliveryStyle.CLIPBOARD:
-                            self._send_command_v()
-                        else:
-                            self._send_direct_text(processed_text)
-                        result.delivered = True
-                        if submit:
-                            bridge.post_key(_RETURN_KEYCODE, True)
-                            bridge.post_key(_RETURN_KEYCODE, False)
-                except Exception as exc:  # noqa: BLE001 - never retry input
-                    result.delivered = False
-                    self._logger.error(
-                        "delivery input failed style=%s reason=%s",
-                        style.value,
-                        _error_name(exc),
-                    )
-                finally:
-                    for keycode in held:
-                        try:
-                            physically_down = bool(
-                                bridge.modifier_physically_down(keycode)
-                            )
-                        except Exception:  # noqa: BLE001
-                            physically_down = False
-                            result.modifiers_restored = False
-                            result.warnings.append(
-                                DeliveryWarning.MODIFIER_RESTORE_FAILED
-                            )
-                        if not physically_down:
-                            continue
-                        try:
-                            bridge.post_key(keycode, True)
-                            with self._state_lock:
-                                self._synthetic_modifiers.add(keycode)
-                        except Exception:  # noqa: BLE001
-                            result.modifiers_restored = False
-                            result.warnings.append(
-                                DeliveryWarning.MODIFIER_RESTORE_FAILED
-                            )
-        except Exception as exc:  # noqa: BLE001
+            if style is DeliveryStyle.CLIPBOARD:
+                self._send_command_v()
+            else:
+                self._send_direct_text(processed_text)
+            result.delivered = True
+            if submit:
+                bridge.post_key(_RETURN_KEYCODE, True, flags=0)
+                bridge.post_key(_RETURN_KEYCODE, False, flags=0)
+        except Exception as exc:  # noqa: BLE001 - never retry input
             result.delivered = False
             self._logger.error(
-                "delivery suppression failed reason=%s", _error_name(exc)
+                "delivery input failed style=%s reason=%s",
+                style.value,
+                _error_name(exc),
             )
-        result.warnings = list(dict.fromkeys(result.warnings))
         return result
 
     def _prepare_delivery(self, request: DeliveryRequest) -> _DeliveryPreparation:
@@ -1293,22 +1196,6 @@ class MacosDeliveryAdapter:
                 "clipboard close restore failed reason=%s", _error_name(exc)
             )
 
-    def _release_synthetic_modifiers(self) -> None:
-        with self._state_lock:
-            modifiers = tuple(self._synthetic_modifiers)
-            self._synthetic_modifiers.clear()
-        if not modifiers:
-            return
-        try:
-            with self._suppression_context():
-                for keycode in modifiers:
-                    try:
-                        self._native_bridge().post_key(keycode, False)
-                    except Exception:  # noqa: BLE001
-                        self._logger.warning("modifier cleanup failed")
-        except Exception:  # noqa: BLE001
-            self._logger.warning("modifier cleanup suppression failed")
-
     def close(self) -> None:
         """Synchronously restore adapter-owned state and block later input."""
 
@@ -1328,7 +1215,6 @@ class MacosDeliveryAdapter:
                     add_attempt=False,
                 )
             self._restore_all_pending_clipboards()
-            self._release_synthetic_modifiers()
             with self._state_lock:
                 self._targets.clear()
                 self._cancelled_requests.clear()
