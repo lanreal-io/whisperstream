@@ -534,6 +534,22 @@ def test_internal_engine_dependencies_use_shared_locked_public_graph() -> None:
     assert build_script.RUSTC_VERSION == "1.97.1"
 
 
+def test_engine_prepares_fixed_portaudio_after_locked_install(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(build_script, "_managed_python", lambda *args: tmp_path / "python")
+    monkeypatch.setattr(build_script, "_run", lambda command, **kwargs: calls.append(command))
+    python, _ = build_script._engine_environment(
+        tmp_path / "build", tmp_path / "tools", tmp_path / "source", {}, tmp_path / "logs"
+    )
+    install_index = next(i for i, command in enumerate(calls) if command[:3] == ["uv", "sync", "--locked"])
+    prepare_index = next(i for i, command in enumerate(calls) if any("prepare_macos_portaudio.py" in arg for arg in command))
+    assert prepare_index > install_index
+    assert calls[prepare_index] == [
+        str(python), str(REPO_ROOT / "scripts/prepare_macos_portaudio.py"),
+        "--receipt", str(tmp_path / "logs/portaudio-provenance.json"),
+    ]
+
+
 def test_internal_engine_keeps_supported_sherpa_worker_modules(tmp_path, monkeypatch) -> None:
     """The frozen child must retain every backend exposed by the Mac picker."""
     source_root = tmp_path / "source"

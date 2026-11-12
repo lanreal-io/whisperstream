@@ -146,6 +146,7 @@ fi
 # Supertonic, so an ordinary `uv run` leaves this environment unchanged.
 (cd "$ROOT" && uv sync --locked --extra dev)
 (cd "$ROOT" && uv run --no-sync python scripts/check-sherpa-source.py)
+(cd "$ROOT" && uv run --no-sync python scripts/prepare_macos_portaudio.py)
 
 WORKER="$WORKER_DIR/target/release/whisperstream-macos-stt-worker"
 WORKER_NEEDS_BUILD=0

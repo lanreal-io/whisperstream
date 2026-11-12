@@ -768,6 +768,11 @@ def _engine_environment(
         [str(engine_python), str(REPO_ROOT / "scripts/check-sherpa-source.py")],
         cwd=REPO_ROOT, env=env, log_path=log_dir / "macos-sherpa.log",
     )
+    _run(
+        [str(engine_python), str(REPO_ROOT / "scripts/prepare_macos_portaudio.py"),
+         "--receipt", str(log_dir / "portaudio-provenance.json")],
+        cwd=REPO_ROOT, env=env, log_path=log_dir / "macos-portaudio.log",
+    )
     engine_env = dict(env)
     engine_env["PYTHONPATH"] = str(source_root / "src")
     return engine_python, engine_env
@@ -1391,6 +1396,7 @@ def build(
         },
         "source_stage": source_measurement,
         "llama_cpp_stage": llama_stage,
+        "portaudio": json.loads((log_dir / "portaudio-provenance.json").read_text()),
         "frontend": frontend_measurement,
         "artifacts": {
             "app": {**_tree_measurement(app), "path": str(app)},
