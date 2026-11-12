@@ -156,30 +156,11 @@ class FakeListenerFactory:
         return listener
 
 
-class ManualTimer:
-    def __init__(self, _delay: float, callback: Callable[[], None]) -> None:
-        self.callback = callback
-        self.daemon = False
-        self.cancelled = False
-        self.started = False
-
-    def start(self) -> None:
-        self.started = True
-
-    def cancel(self) -> None:
-        self.cancelled = True
-
-    def fire(self) -> None:
-        if not self.cancelled:
-            self.callback()
-
-
 def _manager(
     factory: FakeListenerFactory | None = None,
     *,
     report: PermissionReport | None = None,
     physical: Callable[[int], bool] | None = None,
-    timer_factory: Callable[[float, Callable[[], None]], ManualTimer] | None = None,
 ) -> tuple[MacosShortcutAdapter, FakeListenerFactory]:
     selected = factory or FakeListenerFactory()
     return (
@@ -188,7 +169,6 @@ def _manager(
             listener_factory=selected,
             permission_reporter=lambda: report or _permission_report(),
             physical_key_state=physical or (lambda _keycode: False),
-            suppress_timer_factory=timer_factory,
         ),
         selected,
     )
@@ -331,12 +311,13 @@ def test_native_modifier_only_transitions_use_event_flags(
 def test_native_modifier_release_tracks_left_and_right_keys_separately() -> None:
     emitted: list[MacKeyEvent] = []
     command = macos_shortcuts_module._CG_EVENT_FLAG_MASK_COMMAND
+    left, right = 0x08, 0x10
     listener, _api = _native_listener(
         lambda event: emitted.append(event) or False,
         {
-            211: (55, command, 0),
-            212: (54, command, 0),
-            213: (55, command, 0),
+            211: (55, command | left, 0),
+            212: (54, command | left | right, 0),
+            213: (55, command | right, 0),
             214: (54, 0, 0),
         },
     )
@@ -351,6 +332,55 @@ def test_native_modifier_release_tracks_left_and_right_keys_separately() -> None
         (("key", 54), ShortcutTransition.PRESSED),
         (("key", 55), ShortcutTransition.RELEASED),
         (("key", 54), ShortcutTransition.RELEASED),
+    ]
+
+
+def test_native_modifier_state_comes_from_each_event_not_earlier_events() -> None:
+    # A repeated flagsChanged for a held key (for example one that macOS emits
+    # around injected input) must not read as a release, and a lost release
+    # must not invert the next press.
+    emitted: list[MacKeyEvent] = []
+    shift = macos_shortcuts_module._CG_EVENT_FLAG_MASK_SHIFT
+    right = 0x04
+    listener, _api = _native_listener(
+        lambda event: emitted.append(event) or False,
+        {
+            221: (60, shift | right, 0),
+            222: (60, shift | right, 0),
+            223: (60, shift | right, 0),
+            224: (60, 0, 0),
+        },
+    )
+
+    for event in (221, 222, 223, 224):
+        listener._on_native_event(
+            0, macos_shortcuts_module._CG_EVENT_FLAGS_CHANGED, event, 0
+        )
+
+    assert [event.transition for event in emitted] == [
+        ShortcutTransition.PRESSED,
+        ShortcutTransition.PRESSED,
+        ShortcutTransition.PRESSED,
+        ShortcutTransition.RELEASED,
+    ]
+
+
+def test_native_modifier_without_device_bits_uses_the_family_flag() -> None:
+    emitted: list[MacKeyEvent] = []
+    command = macos_shortcuts_module._CG_EVENT_FLAG_MASK_COMMAND
+    listener, _api = _native_listener(
+        lambda event: emitted.append(event) or False,
+        {231: (54, command, 0), 232: (54, 0, 0)},
+    )
+
+    for event in (231, 232):
+        listener._on_native_event(
+            0, macos_shortcuts_module._CG_EVENT_FLAGS_CHANGED, event, 0
+        )
+
+    assert [event.transition for event in emitted] == [
+        ShortcutTransition.PRESSED,
+        ShortcutTransition.RELEASED,
     ]
 
 
@@ -803,40 +833,62 @@ def test_disabled_event_tap_reenables_or_fails_typed_and_balances_hold() -> None
     manager.close()
 
 
-def test_self_event_fence_standalone_suppression_and_modifier_reconciliation() -> None:
-    timers: list[ManualTimer] = []
-    physical_down = {55}
-
-    def timer_factory(delay: float, callback: Callable[[], None]) -> ManualTimer:
-        timer = ManualTimer(delay, callback)
-        timers.append(timer)
-        return timer
-
-    manager, factory = _manager(
-        physical=lambda code: code in physical_down,
-        timer_factory=timer_factory,
-    )
+def test_injected_input_never_changes_a_held_recording_shortcut() -> None:
+    manager, factory = _manager(physical=lambda code: code == 60)
     calls: list[str] = []
     manager.register_push_to_talk(
         "right shift", lambda: calls.append("begin"), lambda: calls.append("end")
     )
     listener = factory.listeners[0]
 
-    with manager.suppress_self_events():
-        assert listener.emit_key(60, ShortcutTransition.PRESSED) is False
-    assert timers[0].started
-    assert listener.emit_key(60, ShortcutTransition.PRESSED) is False
-    timers[0].fire()
-    assert manager.snapshot_held_modifiers() == ["cmd"]
-    assert manager.modifier_physically_down("cmd") is True
-
-    # An unrelated held modifier must be released before a new PTT gesture.
-    assert listener.emit_key(55, ShortcutTransition.RELEASED) is False
     assert listener.emit_key(60, ShortcutTransition.PRESSED) is True
+    _wait_for(lambda: calls == ["begin"])
+    # A paste of the previous dictation lands while the key is held.
+    with manager.suppress_self_events():
+        assert listener.emit_key(9, ShortcutTransition.PRESSED, synthetic=True) is False
+        assert listener.emit_key(9, ShortcutTransition.RELEASED, synthetic=True) is False
+    time.sleep(.02)
+    assert calls == ["begin"]
     assert listener.emit_key(60, ShortcutTransition.RELEASED) is True
-    assert listener.emit_key(60, ShortcutTransition.PRESSED, synthetic=True) is False
-    assert listener.emit_key(60, ShortcutTransition.RELEASED, synthetic=True) is False
     _wait_for(lambda: calls == ["begin", "end"])
+    manager.close()
+
+
+def test_physical_release_during_injection_is_not_lost() -> None:
+    manager, factory = _manager()
+    calls: list[str] = []
+    manager.register_push_to_talk(
+        "right shift", lambda: calls.append("begin"), lambda: calls.append("end")
+    )
+    listener = factory.listeners[0]
+
+    listener.emit_key(60, ShortcutTransition.PRESSED)
+    with manager.suppress_self_events():
+        listener.emit_key(60, ShortcutTransition.RELEASED)
+    _wait_for(lambda: calls == ["begin", "end"])
+    listener.emit_key(60, ShortcutTransition.PRESSED)
+    listener.emit_key(60, ShortcutTransition.RELEASED)
+    _wait_for(lambda: calls == ["begin", "end", "begin", "end"])
+    manager.close()
+
+
+def test_reenabled_tap_settles_a_missed_modifier_release() -> None:
+    physical_down: set[int] = {55}
+    manager, factory = _manager(physical=lambda code: code in physical_down)
+    calls: list[str] = []
+    manager.register_toggle(
+        "right cmd", lambda: calls.append("start"), lambda: calls.append("stop")
+    )
+    listener = factory.listeners[0]
+
+    listener.emit_key(55, ShortcutTransition.PRESSED)
+    # Left Command's release is lost while macOS has the tap disabled.
+    physical_down.clear()
+    listener.emit_disabled(reenabled=True)
+    _wait_for(lambda: ("key", 55) not in manager._pressed)
+    assert listener.emit_key(54, ShortcutTransition.PRESSED) is True
+    listener.emit_key(54, ShortcutTransition.RELEASED)
+    _wait_for(lambda: calls == ["start"])
     manager.close()
 
 
@@ -1479,187 +1531,3 @@ def test_closed_adapter_rejects_capture_without_listener_or_callback() -> None:
     assert not manager.capture_active
     assert factory.listeners == []
     assert manager.last_listener_failure is ShortcutFailure.LISTENER_DISABLED
-
-
-def test_suppressed_physical_tap_release_rearms_paste_last() -> None:
-    timers: list[ManualTimer] = []
-    physical_down = {79}
-
-    def timer_factory(delay: float, callback: Callable[[], None]) -> ManualTimer:
-        timer = ManualTimer(delay, callback)
-        timers.append(timer)
-        return timer
-
-    manager, factory = _manager(
-        physical=lambda code: code in physical_down, timer_factory=timer_factory
-    )
-    calls: list[str] = []
-    try:
-        manager.register_extra_hotkey("f18", lambda: calls.append("paste"))
-        listener = factory.listeners[0]
-        listener.emit_key(79, ShortcutTransition.PRESSED)
-        _wait_for(lambda: calls == ["paste"])
-        with manager.suppress_self_events():
-            physical_down.clear()
-            listener.emit_key(79, ShortcutTransition.RELEASED)
-        timers[0].fire()
-        physical_down.add(79)
-        listener.emit_key(79, ShortcutTransition.PRESSED)
-        listener.emit_key(79, ShortcutTransition.RELEASED)
-        _wait_for(lambda: calls == ["paste", "paste"])
-    finally:
-        manager.close()
-
-
-@pytest.mark.parametrize("held", [False, True])
-def test_suppressed_hold_release_balances_only_when_physically_released(held: bool) -> None:
-    timers: list[ManualTimer] = []
-    physical_down = {98}
-
-    def timer_factory(delay: float, callback: Callable[[], None]) -> ManualTimer:
-        timer = ManualTimer(delay, callback)
-        timers.append(timer)
-        return timer
-
-    manager, factory = _manager(
-        physical=lambda code: code in physical_down, timer_factory=timer_factory
-    )
-    calls: list[str] = []
-    try:
-        manager.register_push_to_talk("f7", lambda: calls.append("begin"), lambda: calls.append("end"))
-        listener = factory.listeners[0]
-        listener.emit_key(98, ShortcutTransition.PRESSED)
-        _wait_for(lambda: calls == ["begin"])
-        with manager.suppress_self_events():
-            if not held:
-                physical_down.clear()
-                listener.emit_key(98, ShortcutTransition.RELEASED)
-        timers[0].fire()
-        if held:
-            time.sleep(.02)
-            assert calls == ["begin"]
-        else:
-            _wait_for(lambda: calls == ["begin", "end"])
-        physical_down.clear()
-        listener.emit_key(98, ShortcutTransition.RELEASED)
-        _wait_for(lambda: calls == ["begin", "end"])
-        assert calls.count("end") == 1
-    finally:
-        manager.close()
-
-
-def test_suppression_does_not_release_key_when_physical_state_is_unknown() -> None:
-    timers: list[ManualTimer] = []
-
-    def physical(_code: int) -> bool:
-        raise RuntimeError("physical state unavailable")
-
-    def timer_factory(delay: float, callback: Callable[[], None]) -> ManualTimer:
-        timer = ManualTimer(delay, callback)
-        timers.append(timer)
-        return timer
-
-    manager, factory = _manager(physical=physical, timer_factory=timer_factory)
-    calls: list[str] = []
-    try:
-        manager.register_push_to_talk("f7", lambda: calls.append("begin"), lambda: calls.append("end"))
-        listener = factory.listeners[0]
-        listener.emit_key(98, ShortcutTransition.PRESSED)
-        _wait_for(lambda: calls == ["begin"])
-        with manager.suppress_self_events():
-            listener.emit_key(98, ShortcutTransition.RELEASED)
-        timers[0].fire()
-        time.sleep(.02)
-        assert calls == ["begin"]
-        listener.emit_key(98, ShortcutTransition.RELEASED)
-        _wait_for(lambda: calls == ["begin", "end"])
-    finally:
-        manager.close()
-
-
-def test_nested_suppression_reconciles_modifier_release_only_at_final_expiry() -> None:
-    timers: list[ManualTimer] = []
-    physical_down = {60}
-    manager = None
-
-    def physical(code: int) -> bool:
-        assert manager is not None
-        assert manager._suppress_lock.locked()
-        return code in physical_down
-
-    def timer_factory(delay: float, callback: Callable[[], None]) -> ManualTimer:
-        timer = ManualTimer(delay, callback)
-        timers.append(timer)
-        return timer
-
-    manager, factory = _manager(physical=physical, timer_factory=timer_factory)
-    calls: list[str] = []
-    try:
-        manager.register_push_to_talk("right shift", lambda: calls.append("begin"), lambda: calls.append("end"))
-        listener = factory.listeners[0]
-        listener.emit_key(60, ShortcutTransition.PRESSED)
-        _wait_for(lambda: calls == ["begin"])
-        with manager.suppress_self_events():
-            with manager.suppress_self_events():
-                physical_down.clear()
-                listener.emit_key(60, ShortcutTransition.RELEASED)
-        timers[0].fire()
-        time.sleep(.02)
-        assert calls == ["begin"]
-        timers[1].fire()
-        _wait_for(lambda: calls == ["begin", "end"])
-        listener.emit_key(60, ShortcutTransition.RELEASED)
-        assert calls.count("end") == 1
-    finally:
-        manager.close()
-
-
-def test_suppression_expiry_and_native_event_share_lock_order() -> None:
-    timers: list[ManualTimer] = []
-
-    def timer_factory(delay: float, callback: Callable[[], None]) -> ManualTimer:
-        timer = ManualTimer(delay, callback)
-        timers.append(timer)
-        return timer
-
-    manager, factory = _manager(timer_factory=timer_factory)
-    manager.register_extra_hotkey("f18", lambda: None)
-    listener = factory.listeners[0]
-    with manager.suppress_self_events():
-        pass
-    event_owns_lock = threading.Event()
-    expiry_started = threading.Event()
-    event_done = threading.Event()
-    failures: list[Exception] = []
-
-    def native_event() -> None:
-        try:
-            with manager._lock:
-                event_owns_lock.set()
-                assert expiry_started.wait(1)
-                # Let expiry try to acquire its first lock while the listener
-                # retains the lock held by _handle_listener_event.
-                time.sleep(.03)
-                listener.emit_key(79, ShortcutTransition.RELEASED)
-                event_done.set()
-        except Exception as exc:
-            failures.append(exc)
-
-    def expiry() -> None:
-        assert event_owns_lock.wait(1)
-        expiry_started.set()
-        timers[0].fire()
-
-    event_thread = threading.Thread(target=native_event, daemon=True)
-    expiry_thread = threading.Thread(target=expiry, daemon=True)
-    try:
-        event_thread.start()
-        expiry_thread.start()
-        event_thread.join(timeout=1)
-        expiry_thread.join(timeout=1)
-        assert event_done.is_set(), "native event deadlocked with suppression expiry"
-        assert not event_thread.is_alive() and not expiry_thread.is_alive()
-        assert not failures
-    finally:
-        if not event_thread.is_alive() and not expiry_thread.is_alive():
-            manager.close()

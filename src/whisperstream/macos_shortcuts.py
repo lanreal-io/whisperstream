@@ -43,7 +43,6 @@ from .shortcut_contract import (
 
 _LISTENER_JOIN_TIMEOUT_S = 2.0
 _LISTENER_START_TIMEOUT_S = 2.0
-_SUPPRESS_GRACE_S = 0.05
 _DISPATCH_STOP = object()
 
 # Core Graphics constants from the macOS SDK's CGEventTypes.h.
@@ -60,7 +59,7 @@ _CG_EVENT_SOURCE_USER_DATA = 42
 _CG_SESSION_EVENT_TAP = 1
 _CG_HEAD_INSERT_EVENT_TAP = 0
 _CG_EVENT_TAP_OPTION_DEFAULT = 0
-_CG_COMBINED_SESSION_STATE = 0
+_CG_HID_SYSTEM_STATE = 1
 _SYNTHETIC_EVENT_MARKER = 0x5753485354524D31  # ``WSHSTRM1``
 
 # Modifier state carried by a ``flagsChanged`` event. These are the public
@@ -85,6 +84,45 @@ _MODIFIER_FLAG_BY_KEYCODE = {
     62: _CG_EVENT_FLAG_MASK_CONTROL,
     63: _CG_EVENT_FLAG_MASK_SECONDARY_FN,
 }
+# Side-specific device bits (IOLLEvent.h NX_DEVICE*KEYMASK) carried in the same
+# flags. They say which physical key of a family is down, so a flagsChanged
+# event alone tells press from release without remembering earlier events.
+_DEVICE_FLAG_BY_KEYCODE = {
+    54: 0x00000010,  # right Command
+    55: 0x00000008,  # left Command
+    56: 0x00000002,  # left Shift
+    58: 0x00000020,  # left Option
+    59: 0x00000001,  # left Control
+    60: 0x00000004,  # right Shift
+    61: 0x00000040,  # right Option
+    62: 0x00002000,  # right Control
+}
+_DEVICE_FAMILY_BITS = {
+    _CG_EVENT_FLAG_MASK_COMMAND: 0x00000018,
+    _CG_EVENT_FLAG_MASK_SHIFT: 0x00000006,
+    _CG_EVENT_FLAG_MASK_ALTERNATE: 0x00000060,
+    _CG_EVENT_FLAG_MASK_CONTROL: 0x00002001,
+}
+
+
+def _modifier_key_down(keycode: int, event_flags: int) -> bool:
+    """Read one modifier key's state from a flagsChanged event's own flags.
+
+    Caps Lock reports its lock state and Fn has no sides; both use the family
+    flag. A sided key uses its device bit, or the family flag when an event
+    carries no device bits for that family.
+    """
+    family = _MODIFIER_FLAG_BY_KEYCODE[keycode]
+    if not event_flags & family:
+        return False
+    device = _DEVICE_FLAG_BY_KEYCODE.get(keycode)
+    if device is None:
+        return True
+    if not event_flags & _DEVICE_FAMILY_BITS[family]:
+        return True
+    return bool(event_flags & device)
+
+
 _MODIFIER_NAME_BY_FLAG = {
     "cmd": _CG_EVENT_FLAG_MASK_COMMAND,
     "shift": _CG_EVENT_FLAG_MASK_SHIFT,
@@ -224,7 +262,7 @@ class _CoreGraphicsApi:
             raise _NativeShortcutUnavailableError("native run-loop mode unavailable")
 
     def key_down(self, keycode: int) -> bool:
-        return bool(self.cg.CGEventSourceKeyState(_CG_COMBINED_SESSION_STATE, keycode))
+        return bool(self.cg.CGEventSourceKeyState(_CG_HID_SYSTEM_STATE, keycode))
 
 
 class _CoreGraphicsEventListener:
@@ -243,7 +281,6 @@ class _CoreGraphicsEventListener:
         self._source: int | None = None
         self._run_loop: int | None = None
         self._native_callback: object | None = None
-        self._modifier_keys_down: set[int] = set()
         self._ready = threading.Event()
         self._stopped = threading.Event()
         self._stop_requested = threading.Event()
@@ -403,17 +440,9 @@ class _CoreGraphicsEventListener:
             identity = ("key", raw_code)
             pressed = event_type == _CG_EVENT_KEY_DOWN
             if event_type == _CG_EVENT_FLAGS_CHANGED:
-                flag = _MODIFIER_FLAG_BY_KEYCODE.get(raw_code)
-                if flag is None:
+                if raw_code not in _MODIFIER_FLAG_BY_KEYCODE:
                     return event
-                if raw_code in self._modifier_keys_down:
-                    pressed = False
-                    if not synthetic:
-                        self._modifier_keys_down.discard(raw_code)
-                else:
-                    pressed = bool(event_flags & flag)
-                    if pressed and not synthetic:
-                        self._modifier_keys_down.add(raw_code)
+                pressed = _modifier_key_down(raw_code, event_flags)
         suppress = self._callback(
             MacKeyEvent(
                 identity=identity,
@@ -649,13 +678,11 @@ class MacosShortcutAdapter:
         listener_factory: Callable[[Callable[[MacKeyEvent], bool]], _EventListener] | None = None,
         permission_reporter: Callable[[], PermissionReport] | None = None,
         physical_key_state: Callable[[int], bool] | None = None,
-        suppress_timer_factory: Callable[[float, Callable[[], None]], threading.Timer] | None = None,
     ) -> None:
         self._logger = logger
         self._listener_factory = listener_factory or _CoreGraphicsEventListener
         self._permission_reporter = permission_reporter or self._query_permissions
         self._physical_key_state = physical_key_state or self._native_key_state
-        self._suppress_timer_factory = suppress_timer_factory or threading.Timer
         self._listener: _EventListener | None = None
         self._listener_generation: object | None = None
         self._lock = threading.RLock()
@@ -679,9 +706,6 @@ class MacosShortcutAdapter:
         self._early_suppressed: set[_KeyIdentity] = set()
         self._standalone_suppressed: set[_KeyIdentity] = set()
         self._passthrough_until_release: set[_KeyIdentity] = set()
-        self._suppress_depth = 0
-        self._suppress_lock = threading.Lock()
-        self._suppress_timers: set[threading.Timer] = set()
         self._last_cleanup_failure: ShortcutFailure | None = None
         self._last_listener_failure: ShortcutFailure | None = None
         self._listener_reenable_count = 0
@@ -1282,9 +1306,19 @@ class MacosShortcutAdapter:
                 self._passthrough_until_release.update(self._standalone_suppressed)
                 self._early_suppressed.clear()
                 self._standalone_suppressed.clear()
+            reenabled = event.reenabled
+            self._queue_callback(
+                lambda: self._logger.warning(
+                    "hotkey listener interrupted reenabled=%s",
+                    str(reenabled).lower(),
+                )
+            )
             if event.reenabled:
                 self._listener_reenable_count += 1
                 self._last_listener_failure = None
+                # Key events were lost while the tap was off. Settle from the
+                # physical key state so a missed release cannot block a shortcut.
+                self._queue_callback(self._reconcile_after_missed_events)
             else:
                 self._last_listener_failure = ShortcutFailure.LISTENER_DISABLED
                 generation = self._listener_generation
@@ -1295,9 +1329,6 @@ class MacosShortcutAdapter:
         assert event.identity is not None and event.transition is not None
         if self._closed or event.synthetic:
             return False
-        with self._suppress_lock:
-            if self._suppress_depth > 0:
-                return False
         with self._lock:
             identity = event.identity
             name = _identity_name(identity)
@@ -1374,6 +1405,24 @@ class MacosShortcutAdapter:
                 if event.transition is ShortcutTransition.PRESSED and active:
                     for action in registered.state.apply(ShortcutTransition.PRESSED):
                         self._dispatch_action(registered, action)
+                elif (
+                    event.transition is ShortcutTransition.PRESSED
+                    and not registered.state.active
+                    and any(identity in options for options in registered.targets)
+                    and self._targets_active(
+                        registered.targets, self._pressed, allow_extra_modifiers=True
+                    )
+                ):
+                    extra = sum(
+                        1 for held in self._pressed
+                        if held[0] == "key" and held[1] in _MODIFIER_CODES
+                        and not any(held in options for options in registered.targets)
+                    )
+                    self._queue_callback(
+                        lambda count=extra: self._logger.debug(
+                            "hotkey press ignored reason=extra_modifier held=%d", count
+                        )
+                    )
                 elif event.transition is ShortcutTransition.RELEASED and not active:
                     for action in registered.state.apply(ShortcutTransition.RELEASED):
                         self._dispatch_action(registered, action)
@@ -1582,40 +1631,25 @@ class MacosShortcutAdapter:
 
     @contextmanager
     def suppress_self_events(self) -> Iterator[None]:
-        with self._suppress_lock:
-            self._suppress_depth += 1
-        try:
-            yield
-        finally:
-            timer: threading.Timer | None = None
+        """Kept for the shared contract; injected input is already identified.
 
-            def release() -> None:
-                try:
-                    self._suppress_release_one()
-                finally:
-                    if timer is not None:
-                        self._suppress_timers.discard(timer)
+        Delivery marks every event it posts, and the listener ignores marked
+        events. Physical input during an injection stays visible, so nothing
+        needs to be reconciled afterwards.
+        """
+        yield
 
-            timer = self._suppress_timer_factory(_SUPPRESS_GRACE_S, release)
-            timer.daemon = True
-            self._suppress_timers.add(timer)
-            timer.start()
-
-    def _suppress_release_one(self) -> None:
-        # Native listener callbacks already own _lock before checking suppression.
-        with self._lock, self._suppress_lock:
-            if self._suppress_depth > 0:
-                self._suppress_depth -= 1
-            if self._suppress_depth != 0 or self._closed:
+    def _reconcile_after_missed_events(self) -> None:
+        with self._lock:
+            if self._closed:
                 return
-            # Keep expiry serialized with a new injection entering suppression.
-            self._reconcile_suppressed_releases()
+            self._reconcile_released_keys()
             self._reconcile_modifiers()
 
-    def _reconcile_suppressed_releases(self) -> None:
-        """Rearm gestures whose physical release was hidden by injected input.
+    def _reconcile_released_keys(self) -> None:
+        """Rearm gestures whose physical release was missed while the tap was off.
 
-        Reconcile only keys already observed before suppression. Never synthesize
+        Reconcile only keys already observed as pressed. Never synthesize
         a press, release a physically held key, or infer an unknown key state.
         """
         with self._lock:
@@ -1705,11 +1739,6 @@ class MacosShortcutAdapter:
             # have retained a tap that now permits its exact cleanup to finish.
             self._stop_listener()
             return
-        for timer in tuple(self._suppress_timers):
-            timer.cancel()
-        self._suppress_timers.clear()
-        with self._suppress_lock:
-            self._suppress_depth = 0
         self.unhook_all()
         self._queue.put(_DISPATCH_STOP)
         if self._worker is not threading.current_thread():
