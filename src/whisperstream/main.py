@@ -216,6 +216,11 @@ class SttActivationStaleError(RuntimeError):
     """A newer routing choice superseded a manager under construction."""
 
 
+# Longest a finalizer holds a recording's audio for the startup model load.
+# Normal loads take about a second; a cold first load can take much longer.
+STARTUP_STT_WAIT_SECONDS = 120.0
+
+
 class SttActivationBusyError(RuntimeError):
     """Raised when a live dictation makes an STT manager swap unsafe."""
 
@@ -1709,7 +1714,10 @@ class WhisperstreamApp:
         old_manager = None
         try:
             with self._lock:
-                if self.stt_activation_busy():
+                # Only a swap can disturb dictation. With no live manager, the
+                # active recording is holding its audio for exactly this
+                # install (initial startup load), so refusing would discard it.
+                if self.parakeet is not None and self.stt_activation_busy():
                     raise SttActivationBusyError("dictation is active")
                 if _stt_routing_state(self.config) != _stt_routing_state(target_config):
                     raise SttActivationStaleError("STT activation target is stale")
@@ -1784,11 +1792,20 @@ class WhisperstreamApp:
         Use this in --serve mode after the broadcaster is registered: the server
         starts listening immediately, the frontend can render its UI, and a
         ``model.loaded`` (or ``model.load_failed``) event is broadcast when the
-        load finishes. Recording attempts before the model is ready short-circuit
-        on the ``self.stt_engine is None`` guards in `_on_chunk_ready` and
-        `_finalize_transcription_and_inject`.
+        load finishes. A recording started before the model is ready keeps its
+        audio; its finalizer waits for this load (see
+        `_await_startup_stt_manager`) and transcribes the held waveform.
         """
+        done = threading.Event()
+        self._stt_startup_load_done = done
+
         def _run() -> None:
+            try:
+                _load()
+            finally:
+                done.set()
+
+        def _load() -> None:
             self._broadcast({"type": "model.loading"})
             try:
                 self._load_stt_engine_blocking()
@@ -1825,6 +1842,27 @@ class WhisperstreamApp:
                 })
 
         threading.Thread(target=_run, daemon=True, name="ParakeetLoader").start()
+
+    def _await_startup_stt_manager(self):
+        """Return a manager for audio held while the startup load runs.
+
+        Waits (bounded) only for an in-flight startup load. A missing model
+        (onboarding/download) has no pending load and returns ``None``
+        immediately, preserving the existing skip.
+        """
+        done = getattr(self, "_stt_startup_load_done", None)
+        if self.stt_engine is None and done is not None and not done.is_set():
+            self._broadcast({"type": "state.transcribing", "active": True})
+            started = time.perf_counter()
+            ready = done.wait(STARTUP_STT_WAIT_SECONDS)
+            self.logger.info(
+                "transcription awaited model ready=%s duration_ms=%d",
+                str(ready and self.stt_engine is not None).lower(),
+                int((time.perf_counter() - started) * 1000),
+            )
+        if self.stt_engine is None:
+            return None
+        return WhisperstreamApp._bind_recording_language(self)
 
     def _profile_name(self, profile_id: str) -> str:
         """Return the display name of a profile id, falling back to the id."""
@@ -3171,6 +3209,7 @@ class WhisperstreamApp:
         # Every new attempt needs a fresh generation, including direct callers.
         self._reserve_audio_policy_generation()
         self._recording_stt_manager = None
+        self._recording_awaits_model = False
         if not self._recording_can_start():
             return False
         if not self._require_acceptance(
@@ -3239,6 +3278,10 @@ class WhisperstreamApp:
                 include_browser_domain=site_needed
             )
         self._recording_stt_manager = WhisperstreamApp._bind_recording_language(self)
+        # No model yet (startup load still running): hold the whole waveform
+        # and transcribe it once at stop instead of splitting it between
+        # skipped and transcribed chunks.
+        self._recording_awaits_model = self._recording_stt_manager is None
 
         self.logger.debug("audio capture starting")
         self.audio_capture.set_level_callback(self._on_audio_level)
@@ -3395,6 +3438,9 @@ class WhisperstreamApp:
                     or getattr(self, "_recording", True) is False):
                 self.logger.debug("chunk skipped reason=dictation_cancelled")
                 return
+            if getattr(self, "_recording_awaits_model", False):
+                self.logger.debug("chunk deferred reason=model_not_loaded")
+                return
             stt_manager = getattr(self, "_recording_stt_manager", None) or self.stt_engine
             if stt_manager is None:
                 self.logger.warning("chunk skipped reason=model_not_loaded")
@@ -3478,9 +3524,13 @@ class WhisperstreamApp:
             recording_started_at=float(
                 getattr(self, "_recording_start_time", 0.0)
             ),
+            # A recording that started without a model resolves its
+            # language-bound manager in the finalizer, after the startup load.
             stt_manager=(
                 getattr(self, "_recording_stt_manager", None) or self.stt_engine
-                if getattr(self, "stt_engine", None) is not None else None
+                if getattr(self, "stt_engine", None) is not None
+                and not getattr(self, "_recording_awaits_model", False)
+                else None
             ),
             dictation_app=(
                 getattr(self, "_dictation_app", None)
@@ -3929,6 +3979,8 @@ class WhisperstreamApp:
                 # for rolling clients when a quick tap captures zero frames.
                 self._broadcast({"type": "state.transcribing", "active": False})
                 return
+            if stt_manager is None:
+                stt_manager = self._await_startup_stt_manager()
             if stt_manager is None:
                 self.logger.warning("transcription skipped reason=model_not_loaded")
                 self._broadcast({"type": "state.transcribing", "active": False})
