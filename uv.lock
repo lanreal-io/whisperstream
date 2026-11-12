@@ -1134,7 +1134,7 @@ wheels = [
 
 [[package]]
 name = "whisperstream"
-version = "2.0.4"
+version = "2.0.3"
 source = { editable = "." }
 dependencies = [
     { name = "comtypes", marker = "platform_machine == 'AMD64' and sys_platform == 'win32'" },
