@@ -124,6 +124,7 @@ from .waveform_peaks import compute_peaks, wav_bytes_from_float32
 from . import _build_flags, lockdown_keystore
 
 if TYPE_CHECKING:
+    from .llama_server import LlamaServerSupervisor
     from .foreground_window import RoutingTarget
 # Native context and pin modules are imported only by their platform selectors.
 
@@ -753,6 +754,7 @@ class WhisperstreamApp:
         # already invoked while self._lock is held. The snapshot is deliberately
         # content-free and safe to replay to reconnecting WebSocket clients.
         self._dictation_state_lock = threading.Lock()
+        self._dictation_llama_holds: dict[int, LlamaServerSupervisor] = {}
         self._recording_sequence = 0
         self._dictation_state = {
             "type": "dictation.state",
@@ -1416,6 +1418,21 @@ class WhisperstreamApp:
         with self._dictation_state_lock:
             self._recording_sequence += 1
             recording_id = self._recording_sequence
+            supervisor = getattr(self, "llama_server", None)
+            loop = getattr(self, "_server_loop", None)
+            if (
+                self.config.enhancement_enabled
+                and (self.config.effective_provider() or "").lower() == "local"
+                and supervisor is not None
+                and loop is not None
+            ):
+                # Hold before warming: warmup completion must not arm an idle
+                # timer while capture or final cleanup is still active.
+                supervisor.begin_dictation()
+                if not hasattr(self, "_dictation_llama_holds"):
+                    self._dictation_llama_holds = {}
+                self._dictation_llama_holds[recording_id] = supervisor
+                supervisor.kick_warm(loop)
             event = {
                 "type": "dictation.state",
                 "version": _DICTATION_STATE_VERSION,
@@ -1476,6 +1493,14 @@ class WhisperstreamApp:
         if phase not in _DICTATION_PHASES:
             raise ValueError(f"invalid dictation phase: {phase}")
         with self._dictation_state_lock:
+            if phase == "idle":
+                # A stale finalizer releases only its own exact supervisor.
+                # Release even when a newer recording owns the visible state.
+                supervisor = getattr(self, "_dictation_llama_holds", {}).pop(
+                    recording_id, None
+                )
+                if supervisor is not None:
+                    supervisor.end_dictation()
             current = self._dictation_state
             if recording_id != current["recording_id"]:
                 event = None
@@ -3295,18 +3320,6 @@ class WhisperstreamApp:
         # state.recording broadcast below and suppressing the HUD entirely.
         if self.stt_engine is not None:
             self._executor.submit(self.stt_engine.ensure_loaded)
-        # Lazy-warm the local LLM supervisor (if local enhancement is on).
-        # kick_warm is idempotent — duplicate calls during recording are no-ops.
-        # mark_active resets the idle-offload timer so an active user keeps
-        # the model resident across consecutive dictations.
-        if (
-            self.config.enhancement_enabled
-            and (self.config.effective_provider() or "").lower() == "local"
-            and self.llama_server is not None
-            and self._server_loop is not None
-        ):
-            self.llama_server.kick_warm(self._server_loop)
-            self.llama_server.mark_active()
         # Carry the live screen-reader flag so the UI can suppress the HUD overlay
         # for this dictation. The HUD is a WebView2 window; when a screen reader
         # is running, that window appearing yanks NVDA/JAWS into browse mode on

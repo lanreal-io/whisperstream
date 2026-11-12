@@ -12,7 +12,8 @@ Lifecycle (lazy + idle-offload)
    issues one tiny warmup inference. ``is_ready`` flips True once warmup
    completes; until then, ``enhance()`` sees ``is_ready == False`` and
    skips the LLM call (returns raw text immediately, no wait).
-3. ``mark_active()`` resets an idle timer on every recording start. After
+3. ``begin_dictation()`` holds residency through recording and cleanup.
+   ``end_dictation()`` starts the idle timer after the last active dictation. After
    ``idle_timeout_seconds`` of inactivity, the idle timer schedules
    ``stop()`` on the loop, the subprocess is terminated, and ``is_ready``
    flips back to False.
@@ -457,6 +458,7 @@ class LlamaServerSupervisor:
         self._idle_timeout_seconds = float(idle_timeout_seconds)
         self._idle_timer: Optional[threading.Timer] = None
         self._idle_generation = 0
+        self._active_dictations = 0
         # Runtime-only residency suppresses idle offload without rewriting the
         # configured timeout.
         self._residency_pinned = False
@@ -631,10 +633,25 @@ class LlamaServerSupervisor:
         with self._lock:
             return self._residency_pinned
 
-    def mark_active(self) -> None:
-        """Reset the idle timer. Call from the recording-start hook.
+    def begin_dictation(self) -> None:
+        """Hold residency through capture and final delivery, including warmup."""
+        with self._lock:
+            self._active_dictations += 1
+            self._cancel_idle_timer_locked()
 
-        No-op if the idle timeout is disabled (0.0). Thread-safe.
+    def end_dictation(self) -> None:
+        """Release one hold and start idle time after the last dictation."""
+        with self._lock:
+            if self._active_dictations == 0:
+                return
+            self._active_dictations -= 1
+            if self._active_dictations == 0:
+                self._reset_idle_timer_locked()
+
+    def mark_active(self) -> None:
+        """Refresh idle time outside a held dictation. Thread-safe.
+
+        No-op while held or if the idle timeout is disabled (0.0).
         """
         with self._lock:
             self._reset_idle_timer_locked()
@@ -647,7 +664,11 @@ class LlamaServerSupervisor:
 
     def _reset_idle_timer_locked(self) -> None:
         self._cancel_idle_timer_locked()
-        if self._idle_timeout_seconds <= 0 or self._residency_pinned:
+        if (
+            self._idle_timeout_seconds <= 0
+            or self._residency_pinned
+            or self._active_dictations
+        ):
             return
         self._idle_timer = threading.Timer(
             self._idle_timeout_seconds, self._on_idle_expired,
@@ -664,7 +685,11 @@ class LlamaServerSupervisor:
             if generation != self._idle_generation:
                 return
             self._idle_timer = None
-            if self._residency_pinned or self._idle_timeout_seconds <= 0:
+            if (
+                self._residency_pinned
+                or self._active_dictations
+                or self._idle_timeout_seconds <= 0
+            ):
                 return
             loop = self._loop
             process = self._process
@@ -681,7 +706,11 @@ class LlamaServerSupervisor:
             # Loop is shutting down — best-effort sync kill as a last resort.
             with self._lock:
                 proc = self._process
-                if generation != self._idle_generation or self._residency_pinned:
+                if (
+                    generation != self._idle_generation
+                    or self._residency_pinned
+                    or self._active_dictations
+                ):
                     return
                 if proc is not None and proc.returncode is None:
                     try:
@@ -958,6 +987,7 @@ class LlamaServerSupervisor:
             if _idle_generation is not None and (
                 _idle_generation != self._idle_generation
                 or self._residency_pinned
+                or self._active_dictations
                 or self._idle_timeout_seconds <= 0
             ):
                 return

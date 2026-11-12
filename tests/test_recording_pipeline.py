@@ -2369,3 +2369,54 @@ def test_repeated_no_device_attempts_do_not_reuse_closed_audio_policy(_make_app)
         assert not app._try_begin_recording()
         assert not app._try_begin_recording()
     assert app._audio_policy_generation == 2
+
+
+def test_local_residency_tracks_exact_recordings_and_supervisors(_make_app):
+    app = _make_app(enhancement_enabled=True, enhancement_provider='local')
+    first_supervisor = MagicMock()
+    app.llama_server = first_supervisor
+    app._server_loop = MagicMock()
+    first = app._begin_dictation_state(origin='toggle', screen_reader_detected=False)
+    assert first_supervisor.method_calls[:2] == [
+        call.begin_dictation(), call.kick_warm(app._server_loop),
+    ]
+    app._transition_dictation_state(first, 'processing')
+    first_supervisor.end_dictation.assert_not_called()
+    second_supervisor = MagicMock()
+    app.llama_server = second_supervisor
+    second = app._begin_dictation_state(origin='toggle', screen_reader_detected=False)
+    assert not app._transition_dictation_state(first, 'idle')
+    first_supervisor.end_dictation.assert_called_once()
+    second_supervisor.end_dictation.assert_not_called()
+    assert not app._transition_dictation_state(first, 'idle')
+    first_supervisor.end_dictation.assert_called_once()
+    assert app._transition_dictation_state(second, 'idle')
+    second_supervisor.end_dictation.assert_called_once()
+    assert not app._dictation_llama_holds
+
+
+@pytest.mark.parametrize('terminal', ['cancel', 'success', 'error'])
+def test_local_residency_released_on_terminal_paths(_make_app, terminal):
+    app = _make_app(enhancement_enabled=True, enhancement_provider='local')
+    supervisor = MagicMock()
+    app.llama_server = supervisor
+    app._server_loop = MagicMock()
+    with patch('whisperstream.main.screen_reader_active', return_value=False):
+        app._start_recording()
+    recording_id = app.dictation_state_snapshot()['recording_id']
+    supervisor.begin_dictation.assert_called_once()
+    if terminal == 'cancel':
+        app._cancel_recording(play_feedback=False)
+    else:
+        def finalize(context):
+            supervisor.end_dictation.assert_not_called()
+            if terminal == 'error':
+                raise RuntimeError('synthetic finalizer failure')
+        app._finalize_transcription_and_inject = finalize
+        if terminal == 'error':
+            with pytest.raises(RuntimeError):
+                app._finalize_dictation(recording_id)
+        else:
+            app._finalize_dictation(recording_id)
+    supervisor.end_dictation.assert_called_once()
+    assert not app._dictation_llama_holds
