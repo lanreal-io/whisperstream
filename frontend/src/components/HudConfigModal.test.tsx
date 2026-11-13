@@ -1590,18 +1590,20 @@ describe("HudConfigModal locked Agent HUD settings", () => {
     expect(screen.getByRole("textbox", { name: "Reply window seconds" })).toHaveValue("30");
   });
 
-  it("orders the General rows view shortcut, summaries, reply window, auto-send", () => {
+  it("orders the General rows on/off shortcut, view shortcut, summaries, reply window, auto-send", () => {
     renderModal(makeConfig({ agent_speech_enabled: true }));
 
     const agent = screen.getByRole("region", { name: "Agents" });
-    // View full response leads, then Show summaries, then Reply window, then Send replies automatically
+    // The on/off shortcut sits under the switch it drives, then View full
+    // response, Show summaries, Reply window and Send replies automatically.
     expect(
       within(agent)
         .getAllByText(
-          /^(View full response|Show summaries|Reply window|Send replies automatically)$/,
+          /^(On\/off shortcut|View full response|Show summaries|Reply window|Send replies automatically)$/,
         )
         .map((node) => node.textContent),
     ).toEqual([
+      "On/off shortcut",
       "View full response",
       "Show summaries",
       "Reply window",
@@ -1885,6 +1887,25 @@ describe("HudConfigModal locked Agent HUD settings", () => {
     expect(within(screen.getByRole("region", { name: "Agents" })).getByText(conflictText)).toBeInTheDocument();
     // A failed second provider is no longer hidden behind the first one's success.
     expect(within(connections).getByRole("status", { name: "Agents needs attention" })).toBeInTheDocument();
+  });
+
+  it("leaves the on/off shortcut unbound by default", () => {
+    renderModal(makeConfig({ claude_hud_enabled: true }));
+    const agent = screen.getByRole("region", { name: "Agents" });
+    expect(within(agent).getByText("Pauses or resumes Agents from any app.")).toBeInTheDocument();
+    expect(within(agent).getByText("Not set")).toBeInTheDocument();
+  });
+
+  it("reports an on/off shortcut that collides with the view shortcut", () => {
+    renderModal(
+      makeConfig({
+        claude_hud_enabled: true,
+        claude_view_shortcut: "ctrl+alt+a",
+        agents_toggle_shortcut: "ctrl+alt+a",
+      }),
+    );
+    const agent = screen.getByRole("region", { name: "Agents" });
+    expect(within(agent).getByRole("alert")).toHaveTextContent(/already used/);
   });
 
   it("routes provider actions with one click and no surface argument", () => {

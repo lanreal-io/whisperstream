@@ -758,6 +758,9 @@ class WhisperstreamServer:
         self._simulated_tps: Optional[float] = _parse_simulated_tps_env()
         self._app._simulated_tps_provider = lambda: self._simulated_tps
         self._app.set_local_warm_requester(self._request_local_warm)
+        set_agents_toggle = getattr(self._app, "set_agents_toggle_handler", None)
+        if callable(set_agents_toggle):
+            set_agents_toggle(self._schedule_agents_shortcut_toggle)
 
         # --- Lockdown Mode runtime state ---
         # Backend-managed lock + exponential-backoff state for the transcript
@@ -2144,52 +2147,11 @@ class WhisperstreamServer:
             # writes that bool separately via the normal config PUT (Task 2.5).
             # Returns {"ok": True} on success; 500 + error body on failure so the
             # frontend can surface the appropriate error state.
-            if self._diagnostics_locked():
-                self._clear_agent_speak_state(reason="lockdown_effective")
-                return JSONResponse(
-                    status_code=423,
-                    content={"ok": False, "error": "lockdown"},
-                )
-            try:
-                from ..agent_integration_contract import AgentLifecycleAction
-
-                force = await self._lifecycle_force_requested(request)
-                lifecycle, result = await asyncio.to_thread(
-                    self._apply_agent_plugin_action,
-                    AgentLifecycleAction.RECONCILE,
-                    force=force,
-                )
-                if result is None:
-                    error_type = (
-                        getattr(self._agent_plugin_adapter, "last_error_type", None)
-                        or (
-                            lifecycle.failure.value
-                            if lifecycle.failure is not None
-                            else "unknown"
-                        )
-                    )
-                    return JSONResponse(
-                        status_code=500,
-                        content={"ok": False, "error": error_type},
-                    )
-                public_result = self._public_claude_plugin_status(result)
-                self._claude_plugin_status = public_result
-                self._note_claude_reconcile(public_result)
-                if public_result.get("ok") is True and self._loop is not None:
-                    self._write_claude_discovery_file()
-                self._logger.info(
-                    "[ClaudeHUD] enable status=%s",
-                    public_result.get("status", "unknown"),
-                )
-                return public_result
-            except Exception as exc:
-                self._logger.error(
-                    "[ClaudeHUD] enable failed reason=%s", type(exc).__name__
-                )
-                return JSONResponse(
-                    status_code=500,
-                    content={"ok": False, "error": type(exc).__name__},
-                )
+            force = await self._lifecycle_force_requested(request)
+            status_code, payload = await self._enable_claude_plugin(force=force)
+            if status_code != 200:
+                return JSONResponse(status_code=status_code, content=payload)
+            return payload
 
         @api.get("/api/claude-hud/status")
         async def claude_hud_status(refresh: bool = False):
@@ -2533,39 +2495,11 @@ class WhisperstreamServer:
             Connect sends ``{"force": true}`` so it always installs fresh.
             """
 
-            if self._diagnostics_locked():
-                self._clear_agent_speak_state(reason="lockdown_effective")
-                return JSONResponse(
-                    status_code=423,
-                    content={"ok": False, "error": "lockdown"},
-                )
-            try:
-                from functools import partial  # noqa: PLC0415
-
-                from ..codex_plugin_lifecycle import enable_codex_plugin
-
-                force = await self._lifecycle_force_requested(request)
-                result = await asyncio.to_thread(
-                    self._run_codex_lifecycle,
-                    partial(enable_codex_plugin, force=True) if force else enable_codex_plugin,
-                )
-                public_result = self._public_codex_plugin_status(result)
-                self._codex_plugin_status = public_result
-                if public_result.get("ok") is True and self._loop is not None:
-                    self._write_codex_discovery_file()
-                self._logger.info(
-                    "[CodexPlugin] enable status=%s",
-                    public_result.get("status", "unknown"),
-                )
-                return public_result
-            except Exception as exc:
-                self._logger.error(
-                    "[CodexPlugin] enable failed reason=%s", type(exc).__name__
-                )
-                return JSONResponse(
-                    status_code=500,
-                    content={"ok": False, "error": type(exc).__name__},
-                )
+            force = await self._lifecycle_force_requested(request)
+            status_code, payload = await self._enable_codex_plugin(force=force)
+            if status_code != 200:
+                return JSONResponse(status_code=status_code, content=payload)
+            return payload
 
         @api.get("/api/codex-hud/status")
         async def codex_hud_status(refresh: bool = False):
@@ -8658,6 +8592,147 @@ class WhisperstreamServer:
         """A fresh install or update needs a new session's handshake again."""
         if status.get("ok") is True and status.get("status") in {"installed", "updated"}:
             self._clear_claude_connection_record()
+
+    async def _enable_claude_plugin(self, *, force: bool) -> tuple[int, dict[str, Any]]:
+        """Install, update or resume Claude's owned plugin; (status, payload)."""
+        if self._diagnostics_locked():
+            self._clear_agent_speak_state(reason="lockdown_effective")
+            return 423, {"ok": False, "error": "lockdown"}
+        try:
+            from ..agent_integration_contract import AgentLifecycleAction
+
+            lifecycle, result = await asyncio.to_thread(
+                self._apply_agent_plugin_action,
+                AgentLifecycleAction.RECONCILE,
+                force=force,
+            )
+            if result is None:
+                error_type = (
+                    getattr(self._agent_plugin_adapter, "last_error_type", None)
+                    or (
+                        lifecycle.failure.value
+                        if lifecycle.failure is not None
+                        else "unknown"
+                    )
+                )
+                return 500, {"ok": False, "error": error_type}
+            public_result = self._public_claude_plugin_status(result)
+            self._claude_plugin_status = public_result
+            self._note_claude_reconcile(public_result)
+            if public_result.get("ok") is True and self._loop is not None:
+                self._write_claude_discovery_file()
+            self._logger.info(
+                "[ClaudeHUD] enable status=%s",
+                public_result.get("status", "unknown"),
+            )
+            return 200, public_result
+        except Exception as exc:
+            self._logger.error(
+                "[ClaudeHUD] enable failed reason=%s", type(exc).__name__
+            )
+            return 500, {"ok": False, "error": type(exc).__name__}
+
+    async def _enable_codex_plugin(self, *, force: bool) -> tuple[int, dict[str, Any]]:
+        """Install, update or resume Codex's owned plugin; (status, payload)."""
+        if self._diagnostics_locked():
+            self._clear_agent_speak_state(reason="lockdown_effective")
+            return 423, {"ok": False, "error": "lockdown"}
+        try:
+            from functools import partial  # noqa: PLC0415
+
+            from ..codex_plugin_lifecycle import enable_codex_plugin
+
+            result = await asyncio.to_thread(
+                self._run_codex_lifecycle,
+                partial(enable_codex_plugin, force=True) if force else enable_codex_plugin,
+            )
+            public_result = self._public_codex_plugin_status(result)
+            self._codex_plugin_status = public_result
+            if public_result.get("ok") is True and self._loop is not None:
+                self._write_codex_discovery_file()
+            self._logger.info(
+                "[CodexPlugin] enable status=%s",
+                public_result.get("status", "unknown"),
+            )
+            return 200, public_result
+        except Exception as exc:
+            self._logger.error(
+                "[CodexPlugin] enable failed reason=%s", type(exc).__name__
+            )
+            return 500, {"ok": False, "error": type(exc).__name__}
+
+    def _schedule_agents_shortcut_toggle(self) -> None:
+        """Hotkey-thread entry: run the pause/resume toggle on the server loop."""
+        loop = self._loop
+        if loop is None or loop.is_closed():
+            self._logger.info("[Agents] shortcut ignored reason=no_loop")
+            return
+        asyncio.run_coroutine_threadsafe(self._toggle_agents_from_shortcut(), loop)
+
+    async def _toggle_agents_from_shortcut(self) -> None:
+        """Flip the Agents master switch, exactly as the General tab switch does.
+
+        Pausing saves ``agents_enabled = False``; the config publication stops
+        speech and clears the HUD. Resuming saves ``True`` and then resumes each
+        remembered provider without a forced reinstall, like the page's resume.
+        The HUD confirms with ``agents.toggled``; a resume sends a second,
+        settled event naming any provider that could not resume. Presses are
+        serialized.
+        """
+        lock = getattr(self, "_agents_shortcut_lock", None)
+        if lock is None:
+            lock = self._agents_shortcut_lock = asyncio.Lock()
+        async with lock:
+            current = self._app.config
+            if getattr(current, "agent_speak_setup_completed", False) is not True:
+                self._logger.info("[Agents] shortcut ignored reason=setup_incomplete")
+                return
+            if self._diagnostics_locked():
+                self._logger.info("[Agents] shortcut ignored reason=lockdown")
+                return
+            enabled = getattr(current, "agents_enabled", True) is False
+            hud_was_enabled = bool(getattr(current, "claude_hud_enabled", False))
+            codex_was_enabled = bool(getattr(current, "codex_hud_enabled", False))
+            new_config = replace(current, agents_enabled=enabled)
+            try:
+                new_config.validate()
+                self._app.config_manager.save(new_config)
+                self._app.reload_config(new_config)
+            except Exception as exc:  # noqa: BLE001 - nothing changed; tell no one
+                self._logger.warning(
+                    "[Agents] shortcut save failed reason=%s", type(exc).__name__
+                )
+                return
+            self._publish_config_change(new_config, hud_was_enabled, codex_was_enabled)
+            self._logger.info("[Agents] shortcut toggled enabled=%s", enabled)
+            # `settled` is False while remembered providers are still resuming;
+            # the follow-up settled event names any provider that needs the user.
+            self.broadcast({
+                "type": "agents.toggled", "enabled": enabled,
+                "attention": None, "settled": not enabled,
+            })
+            if not enabled:
+                return
+            attention: str | None = None
+            for provider, remembered, enable in (
+                ("claude", hud_was_enabled, self._enable_claude_plugin),
+                ("codex", codex_was_enabled, self._enable_codex_plugin),
+            ):
+                if not remembered:
+                    continue
+                status_code, payload = await enable(force=False)
+                if attention is None and (
+                    status_code != 200
+                    or payload.get("ok") is not True
+                    or payload.get("status") == "failed"
+                    or payload.get("trust_required") is True
+                ):
+                    attention = provider
+            if getattr(self._app.config, "agents_enabled", True) is not False:
+                self.broadcast({
+                    "type": "agents.toggled", "enabled": True,
+                    "attention": attention, "settled": True,
+                })
 
     def _pause_claude_plugin(self) -> None:
         from ..agent_integration_contract import AgentLifecycleAction  # noqa: PLC0415

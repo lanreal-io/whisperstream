@@ -29,6 +29,15 @@ export type AppEvent =
       agent_compose?: boolean;
     }
   | { type: "agent-hud-view" }
+  // The Agents on/off shortcut flipped the master switch. A resume sends an
+  // unsettled event at once, then a settled one after remembered providers
+  // resume, naming any provider that needs the user.
+  | {
+      type: "agents.toggled";
+      enabled: boolean;
+      attention: "claude" | "codex" | null;
+      settled: boolean;
+    }
   | { type: "agent.hud.activity"; version: 1; active: boolean }
   | { type: "state.transcribing"; active: boolean }
   // Backend-owned screen-reader detection, pushed on change. Windows fetch

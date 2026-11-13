@@ -163,6 +163,11 @@ export function Agents({
     const onFocus = () => { void refresh(); };
     window.addEventListener("focus", onFocus);
     const unsubscribe = subscribe((event) => {
+      // The on/off shortcut resumed providers on the backend; read the result.
+      if (event.type === "agents.toggled" && event.settled) {
+        void refresh();
+        return;
+      }
       if ((event.type === "agent.completion" || event.type === "agent.sessions") && needsPolling() && !running && timer === undefined) {
         timer = setTimeout(() => void refresh(false), 5000);
       }

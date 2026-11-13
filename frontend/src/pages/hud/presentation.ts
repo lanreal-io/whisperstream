@@ -52,7 +52,9 @@ export function deriveReplyRailPhase(
 type TransientPillState =
   | "blocked"
   | "enhance_timeout"
-  | "enhance_error";
+  | "enhance_error"
+  | "agents_on"
+  | "agents_paused";
 // Iteration 03: Claude merely working has NO HUD presentation. The pill appears
 // only for a question, a permission request, or a final response.
 type ClaudeAttentionState = "permission";
@@ -79,6 +81,8 @@ export interface TimedTransient {
   /** Bounded provider identity for enhancement outcomes only. No model name, no
    *  host, no message text crosses the wire (transparent-indicators Task 2.2). */
   provider?: EnhancementTimeoutProvider;
+  /** Agents on/off shortcut only: a remembered provider that did not resume. */
+  attention?: AgentName | null;
 }
 
 type HudPresentation =
@@ -90,6 +94,7 @@ type HudPresentation =
       blockedReason?: "eula_acceptance_required";
       timeoutProvider?: EnhancementTimeoutProvider;
       errorProvider?: EnhancementTimeoutProvider;
+      agentsAttention?: AgentName | null;
     }
   | { mode: "preview"; phase: "recording" | "processing" }
   | { mode: "question_pill" }
@@ -244,6 +249,7 @@ export function derivePresentation({
       blockedReason: transient.reason,
       timeoutProvider: transient.provider,
       errorProvider: transient.provider,
+      agentsAttention: transient.attention,
     };
   }
   if (

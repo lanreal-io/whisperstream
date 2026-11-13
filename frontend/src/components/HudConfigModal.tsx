@@ -379,6 +379,9 @@ export function HudConfigModal({
   const [viewCaptureConflict, setViewCaptureConflict] = useState<string | null>(
     null,
   );
+  const [toggleCaptureConflict, setToggleCaptureConflict] = useState<string | null>(
+    null,
+  );
   const [pendingSpeechDownload, setPendingSpeechDownload] =
     useState<PendingSpeechDownload | null>(null);
   const [memoryDialogStatus, setMemoryDialogStatus] =
@@ -487,7 +490,7 @@ export function HudConfigModal({
   const replyGraceSeconds = config.claude_reply_grace_seconds ?? 6;
   const replyAutoSubmit = config.claude_reply_auto_submit ?? false;
   const viewShortcut = config.claude_view_shortcut ?? "ctrl+alt+`";
-  const viewConflictCandidates = [
+  const otherShortcutCandidates = [
     { shortcut: config.primary_shortcut, action: "the primary shortcut" },
     { shortcut: config.push_to_talk_shortcut, action: "Push to Talk" },
     { shortcut: config.toggle_shortcut, action: "Toggle" },
@@ -503,9 +506,22 @@ export function HudConfigModal({
     { shortcut: "enter", action: "Enter" },
     { shortcut: "esc", action: "Escape" },
   ];
+  const agentsToggleShortcut = config.agents_toggle_shortcut ?? "";
+  const viewConflictCandidates = [
+    ...otherShortcutCandidates,
+    { shortcut: agentsToggleShortcut, action: "the Agents on/off shortcut" },
+  ];
+  const toggleConflictCandidates = [
+    ...otherShortcutCandidates,
+    { shortcut: viewShortcut, action: "View full response" },
+  ];
   const viewConflict =
     shortcutConflict(viewShortcut) ||
     namedShortcutConflict(viewShortcut, viewConflictCandidates);
+  const toggleConflict = agentsToggleShortcut
+    ? shortcutConflict(agentsToggleShortcut) ||
+      namedShortcutConflict(agentsToggleShortcut, toggleConflictCandidates)
+    : null;
   const agentsEnabled = readAgentsEnabled(config);
   const rows = agentRows(config, providerResults, providerActivity, providerLastConnect);
   const providerConnected = {
@@ -535,7 +551,8 @@ export function HudConfigModal({
   // The shortcut-conflict line is no longer a floating paragraph between rows;
   // it lives in the Agent section's reserved status slot (locked copy 40 is
   // whatever the shared helpers return, unchanged).
-  const replyConflict = viewCaptureConflict ?? viewConflict;
+  const replyConflict =
+    viewCaptureConflict ?? viewConflict ?? toggleCaptureConflict ?? toggleConflict;
   const conflictStatus: CardStatus | null = replyConflict
     ? { message: replyConflict, tone: "error" }
     : null;
@@ -856,6 +873,29 @@ export function HudConfigModal({
             />
             {/* Pausing keeps every setting, so these stay editable while off. */}
             <div>
+              {/* First, because it drives the switch directly above it. Unbound
+                  by default; the HUD confirms each press with a small pill. */}
+              <SettingRow
+                title="On/off shortcut"
+                description="Pauses or resumes Agents from any app."
+              >
+                <ShortcutCapture
+                  value={agentsToggleShortcut}
+                  onChange={(keys) => {
+                    const conflict = keys
+                      ? shortcutConflict(keys) ||
+                        namedShortcutConflict(keys, toggleConflictCandidates)
+                      : null;
+                    setToggleCaptureConflict(conflict);
+                    if (!conflict) onConfigChange({ agents_toggle_shortcut: keys });
+                  }}
+                  send={send}
+                  subscribe={subscribe}
+                  connected={connected}
+                  captureTarget="agents_toggle"
+                  clearAriaLabel="Clear On/off shortcut"
+                />
+              </SettingRow>
               <SettingRow
                 title="View full response"
                 description="Opens full replies, questions, and sessions started with the Whisperstream CLI."
