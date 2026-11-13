@@ -932,6 +932,11 @@ function ReadyApp({ initialEulaStatus, onConsentRequired }: ReadyAppProps) {
         console.log("[Review] prompt triggered");
         showPopup("popup-review");
       }
+      // The Agents on/off shortcut saved the master switch on the backend.
+      // Patch only that field so an in-flight local save is not clobbered.
+      if (event.type === "agents.toggled") {
+        setConfig((current) => (current ? { ...current, agents_enabled: event.enabled } : current));
+      }
       if (event.type === "error.dialog") {
         console.warn(`[App] error dialog received code=${event.code}`);
         showPopup("popup-error", {

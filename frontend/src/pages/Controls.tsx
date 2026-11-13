@@ -115,9 +115,9 @@ export function Controls({
           clearAriaLabel="Clear Push to Talk shortcut"
         />
       </Section>
-      {(currentShortcutConflict(config.push_to_talk_shortcut) || crossFieldConflict(config.push_to_talk_shortcut, [config.toggle_shortcut, config.paste_last_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? ""])) && (
+      {(currentShortcutConflict(config.push_to_talk_shortcut) || crossFieldConflict(config.push_to_talk_shortcut, [config.toggle_shortcut, config.paste_last_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? "", config.agents_toggle_shortcut ?? ""])) && (
         <div className="text-[11px] text-steel -mt-2 pb-3">
-          {currentShortcutConflict(config.push_to_talk_shortcut) || crossFieldConflict(config.push_to_talk_shortcut, [config.toggle_shortcut, config.paste_last_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? ""])}
+          {currentShortcutConflict(config.push_to_talk_shortcut) || crossFieldConflict(config.push_to_talk_shortcut, [config.toggle_shortcut, config.paste_last_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? "", config.agents_toggle_shortcut ?? ""])}
         </div>
       )}
 
@@ -133,9 +133,9 @@ export function Controls({
           clearAriaLabel="Clear Toggle shortcut"
         />
       </Section>
-      {(currentShortcutConflict(config.toggle_shortcut) || crossFieldConflict(config.toggle_shortcut, [config.push_to_talk_shortcut, config.paste_last_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? ""])) && (
+      {(currentShortcutConflict(config.toggle_shortcut) || crossFieldConflict(config.toggle_shortcut, [config.push_to_talk_shortcut, config.paste_last_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? "", config.agents_toggle_shortcut ?? ""])) && (
         <div className="text-[11px] text-steel -mt-2 pb-3">
-          {currentShortcutConflict(config.toggle_shortcut) || crossFieldConflict(config.toggle_shortcut, [config.push_to_talk_shortcut, config.paste_last_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? ""])}
+          {currentShortcutConflict(config.toggle_shortcut) || crossFieldConflict(config.toggle_shortcut, [config.push_to_talk_shortcut, config.paste_last_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? "", config.agents_toggle_shortcut ?? ""])}
         </div>
       )}
       {!config.push_to_talk_shortcut && !config.toggle_shortcut && (
@@ -156,9 +156,9 @@ export function Controls({
           clearAriaLabel="Clear Paste Last Transcript shortcut"
         />
       </Section>
-      {(currentShortcutConflict(config.paste_last_shortcut) || crossFieldConflict(config.paste_last_shortcut, [config.push_to_talk_shortcut, config.toggle_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? ""])) && (
+      {(currentShortcutConflict(config.paste_last_shortcut) || crossFieldConflict(config.paste_last_shortcut, [config.push_to_talk_shortcut, config.toggle_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? "", config.agents_toggle_shortcut ?? ""])) && (
         <div className="text-[11px] text-steel -mt-2 pb-3">
-          {currentShortcutConflict(config.paste_last_shortcut) || crossFieldConflict(config.paste_last_shortcut, [config.push_to_talk_shortcut, config.toggle_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? ""])}
+          {currentShortcutConflict(config.paste_last_shortcut) || crossFieldConflict(config.paste_last_shortcut, [config.push_to_talk_shortcut, config.toggle_shortcut, config.paste_last_original_shortcut, config.claude_view_shortcut ?? "", config.agents_toggle_shortcut ?? ""])}
         </div>
       )}
 
@@ -174,9 +174,9 @@ export function Controls({
           clearAriaLabel="Clear Paste Last Transcript (Original) shortcut"
         />
       </Section>
-      {(currentShortcutConflict(config.paste_last_original_shortcut) || crossFieldConflict(config.paste_last_original_shortcut, [config.push_to_talk_shortcut, config.toggle_shortcut, config.paste_last_shortcut, config.claude_view_shortcut ?? ""])) && (
+      {(currentShortcutConflict(config.paste_last_original_shortcut) || crossFieldConflict(config.paste_last_original_shortcut, [config.push_to_talk_shortcut, config.toggle_shortcut, config.paste_last_shortcut, config.claude_view_shortcut ?? "", config.agents_toggle_shortcut ?? ""])) && (
         <div className="text-[11px] text-steel -mt-2 pb-3">
-          {currentShortcutConflict(config.paste_last_original_shortcut) || crossFieldConflict(config.paste_last_original_shortcut, [config.push_to_talk_shortcut, config.toggle_shortcut, config.paste_last_shortcut, config.claude_view_shortcut ?? ""])}
+          {currentShortcutConflict(config.paste_last_original_shortcut) || crossFieldConflict(config.paste_last_original_shortcut, [config.push_to_talk_shortcut, config.toggle_shortcut, config.paste_last_shortcut, config.claude_view_shortcut ?? "", config.agents_toggle_shortcut ?? ""])}
         </div>
       )}
 

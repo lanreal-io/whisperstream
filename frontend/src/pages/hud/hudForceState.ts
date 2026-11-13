@@ -70,6 +70,8 @@ export interface HudForcedState {
   timeoutProvider?: EnhancementTimeoutProvider;
   /** Freezes the matching generic error transient for visual review. */
   errorProvider?: EnhancementTimeoutProvider;
+  /** Holds the Agents on/off shortcut confirmation, which clears in 1.6 s. */
+  agentsToggle?: { enabled: boolean; attention?: "claude" | "codex" | null };
   /** Holds the debounced microphone-open presentation for visual QA. */
   startupArming?: boolean;
   /** Live Preview fixtures only: hold the preview at its expanded size. */
@@ -1131,6 +1133,28 @@ export const HUD_FORCED_STATES: HudForcedState[] = [
       "The generic provider fallback in the unchanged 120px envelope, with " +
       "rose error treatment and the longest cloud-provider label.",
     errorProvider: "anthropic",
+  },
+
+  {
+    id: "agents_toggle_on",
+    group: "Agents",
+    label: "On/off shortcut, on",
+    note: "Confirms the Agents shortcut resumed Agents. Held; the real pill clears after 1,600ms.",
+    agentsToggle: { enabled: true },
+  },
+  {
+    id: "agents_toggle_paused",
+    group: "Agents",
+    label: "On/off shortcut, paused",
+    note: "The widest single-line label, greyed mark and text, in the 120px envelope.",
+    agentsToggle: { enabled: false },
+  },
+  {
+    id: "agents_toggle_attention",
+    group: "Agents",
+    label: "On/off shortcut, Codex needs attention",
+    note: "A resume that left Codex unsettled names it on a second line.",
+    agentsToggle: { enabled: true, attention: "codex" },
   },
 ];
 

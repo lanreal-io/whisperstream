@@ -265,6 +265,10 @@ class WhisperstreamConfig:
     paste_last_shortcut: str = "ctrl+alt+v"
     paste_last_original_shortcut: str = ""
     claude_view_shortcut: str = "ctrl+alt+`"
+    # Pauses or resumes Agents (the `agents_enabled` master switch) from any
+    # app. Unbound by default (owner, 2026-11-12) so it cannot collide with an
+    # editor shortcut.
+    agents_toggle_shortcut: str = ""
     # Automatic follows Whisperstream's exact recommendation for `language`.
     # Manual pins the exact artifact encoded by stt_backend + parakeet_model
     # while that artifact supports the selected language.
@@ -663,6 +667,8 @@ class WhisperstreamConfig:
             merged["paste_last_original_shortcut"] = str(merged["paste_last_original_shortcut"]).lower()
         if "claude_view_shortcut" in merged:
             merged["claude_view_shortcut"] = str(merged["claude_view_shortcut"]).lower()
+        if "agents_toggle_shortcut" in merged:
+            merged["agents_toggle_shortcut"] = str(merged["agents_toggle_shortcut"]).lower()
         # Kitten was the former voice engine. Preserve the stored TOML while
         # mapping legacy installs to the lightweight successor in memory.
         default_speech_engine = "auto" if platform.system() == "Darwin" else "supertonic"
@@ -1315,6 +1321,33 @@ class WhisperstreamConfig:
                 )
                 self.claude_view_shortcut = ""
 
+        agents_toggle = (self.agents_toggle_shortcut or "").strip().lower()
+        if agents_toggle:
+            reserved_toggle_conflicts = {
+                (self.primary_shortcut or "").strip().lower(),
+                (self.push_to_talk_shortcut or "").strip().lower(),
+                (self.toggle_shortcut or "").strip().lower(),
+                (self.paste_last_shortcut or "").strip().lower(),
+                (self.paste_last_original_shortcut or "").strip().lower(),
+                (self.claude_view_shortcut or "").strip().lower(),
+                "enter",
+                "esc",
+                "escape",
+            }
+            reserved_toggle_conflicts.update(
+                (shortcut or "").strip().lower()
+                for shortcut in self.profile_hotkeys.values()
+            )
+            reserved_toggle_conflicts.discard("")
+            if agents_toggle in reserved_toggle_conflicts:
+                _log_validation_warning(
+                    ValueError(
+                        "agents_toggle_shortcut conflicts with another action; "
+                        "clearing the Agents shortcut"
+                    )
+                )
+                self.agents_toggle_shortcut = ""
+
         if self.threads is not None and self.threads < 0:
             raise ValueError(f"threads must be non-negative, got {self.threads}")
 
@@ -1511,6 +1544,7 @@ class WhisperstreamConfig:
                 self.primary_shortcut, self.push_to_talk_shortcut, self.toggle_shortcut,
                 self.paste_last_shortcut,
                 self.paste_last_original_shortcut, self.claude_view_shortcut,
+                self.agents_toggle_shortcut,
             ),
         )
         self.power_mode_map = routing["power_mode_map"]

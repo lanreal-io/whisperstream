@@ -2793,6 +2793,15 @@ class WhisperstreamApp:
         except Exception:
             self.logger.warning("hotkey registration failed mode=claude_view")
 
+        try:
+            self.keyboard.register_extra_hotkey(
+                getattr(self.config, "agents_toggle_shortcut", ""),
+                self._on_agents_toggle_press,
+                key="agents_toggle",
+            )
+        except Exception:
+            self.logger.warning("hotkey registration failed mode=agents_toggle")
+
         # Register the per-profile manual-switch hotkeys (issue 14). They ride the
         # primary listener started above, so register them after the primary.
         self._register_profile_hotkeys()
@@ -2818,6 +2827,23 @@ class WhisperstreamApp:
             self._broadcast({"type": "agent-hud-view"})
         except Exception:
             self.logger.warning("hotkey action failed mode=claude_view")
+
+    def _on_agents_toggle_press(self) -> None:
+        """Hand the Agents pause/resume shortcut to the server that owns it."""
+        if not self._require_acceptance():
+            return
+        handler = getattr(self, "_agents_toggle_handler", None)
+        if handler is None:
+            self.logger.info("hotkey press ignored mode=agents_toggle reason=no_handler")
+            return
+        try:
+            handler()
+        except Exception:
+            self.logger.warning("hotkey action failed mode=agents_toggle")
+
+    def set_agents_toggle_handler(self, callback) -> None:
+        """Install the server-owned Agents pause/resume action."""
+        self._agents_toggle_handler = callback
 
     def _on_hotkey_release(self) -> None:
         """Handle hotkey release - stop recording if currently recording."""
@@ -5061,6 +5087,7 @@ class WhisperstreamApp:
         old_paste_shortcut = self.config.paste_last_shortcut
         old_paste_original = self.config.paste_last_original_shortcut
         old_claude_view = self.config.claude_view_shortcut
+        old_agents_toggle = getattr(self.config, "agents_toggle_shortcut", "")
         old_device = self.config.audio_input_device
         old_clipboard_behavior = self.config.clipboard_behavior
         old_clipboard_delay = self.config.clipboard_clear_delay
@@ -5148,6 +5175,7 @@ class WhisperstreamApp:
             or new_config.paste_last_shortcut != old_paste_shortcut
             or new_config.paste_last_original_shortcut != old_paste_original
             or new_config.claude_view_shortcut != old_claude_view
+            or getattr(new_config, "agents_toggle_shortcut", "") != old_agents_toggle
         ):
             self.logger.info("hotkey config changed action=re_register")
             recovery = getattr(self, "_shortcut_recovery", None)

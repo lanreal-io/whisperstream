@@ -10,6 +10,8 @@ export interface AppConfig {
   paste_last_shortcut: string;
   paste_last_original_shortcut: string;
   claude_view_shortcut?: string;
+  /** Pauses or resumes Agents from any app. Empty means unbound (the default). */
+  agents_toggle_shortcut?: string;
   /** `"automatic"` follows Whisperstream's recommended speech model for
    *  `language`; `"manual"` pins the exact artifact encoded by `stt_backend` +
    *  `parakeet_model` for as long as it supports the selected language. The

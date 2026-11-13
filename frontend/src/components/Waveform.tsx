@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef, type RefObject 
 import { motion, useReducedMotion } from "framer-motion";
 
 import type { EnhancementTimeoutProvider } from "../lib/socket/events";
+import { AgentVoiceCompletion, AgentVoiceGlyph } from "./agentSpeak/AgentVoiceGlyph";
 
 export type HUDState = "idle" | "recording" | "processing" | "done" | "blocked";
 
@@ -147,6 +148,89 @@ export function VoiceBars({
 }
 
 const BLOCKED_COLOR = "#5B7FA5";
+
+const AGENT_PROVIDER_NAMES = { claude: "Claude Code", codex: "Codex" } as const;
+const AGENT_SHORT_NAMES = { claude: "Claude", codex: "Codex" } as const;
+
+/**
+ * Confirms the Agents on/off shortcut (owner-accepted prototype, 2026-11-12):
+ * the agent logo and two words inside the 120px transient envelope. On draws
+ * the logo in with the completion stroke; Paused greys the mark and label so
+ * the state reads without color. A resume that left a provider needing the
+ * user adds a second line naming it.
+ */
+export function AgentsToggleIndicator({
+  enabled,
+  attention = null,
+}: {
+  enabled: boolean;
+  attention?: "claude" | "codex" | null;
+}) {
+  const label = enabled ? "Agents on" : "Agents paused";
+  const provider = attention ? AGENT_PROVIDER_NAMES[attention] : null;
+  const announcement = !enabled
+    ? "Agents is paused."
+    : provider
+      ? `Agents is on. ${provider} needs attention. Open Agents to check it.`
+      : "Agents is on.";
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 2 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -2 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="flex items-center justify-center"
+      style={{ gap: 6 }}
+      role="status"
+      aria-live="polite"
+      aria-label={announcement}
+      data-testid="hud-agents-toggle"
+      data-agents-state={enabled ? "on" : "paused"}
+    >
+      <span
+        aria-hidden="true"
+        className="flex shrink-0"
+        style={{
+          filter: enabled ? undefined : "grayscale(1)",
+          opacity: enabled ? 1 : 0.45,
+          transition: "filter 300ms, opacity 300ms",
+        }}
+      >
+        <AgentVoiceCompletion.Provider value={enabled}>
+          <AgentVoiceGlyph speaking={false} size={20} />
+        </AgentVoiceCompletion.Provider>
+      </span>
+      <div className="flex flex-col">
+        <span
+          style={{
+            fontFamily: "Inter, system-ui, sans-serif",
+            fontSize: provider ? 10 : 11,
+            fontWeight: 500,
+            color: enabled ? "var(--color-slate)" : "var(--color-steel)",
+            lineHeight: provider ? "11px" : "13px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {label}
+        </span>
+        {provider && (
+          <span
+            style={{
+              fontFamily: "Inter, system-ui, sans-serif",
+              fontSize: 9,
+              fontWeight: 500,
+              color: "var(--color-steel)",
+              lineHeight: "11px",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {`Check ${AGENT_SHORT_NAMES[attention ?? "codex"]}`}
+          </span>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 /** Dictation is refused until the updated terms are accepted. */
 export function BlockedIndicator() {

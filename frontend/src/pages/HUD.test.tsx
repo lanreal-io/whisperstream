@@ -6959,6 +6959,56 @@ describe("HUD multisession presentation", () => {
     expect(screen.queryByText("Code")).toBeNull();
     expect(screen.queryByTestId("hud-profile-mark")).toBeNull();
   });
+  // --- Agents on/off shortcut confirmation ----------------------------------
+
+  function agentsToggled(
+    enabled: boolean,
+    settled: boolean,
+    attention: "claude" | "codex" | null = null,
+  ): Extract<AppEvent, { type: "agents.toggled" }> {
+    return { type: "agents.toggled", enabled, attention, settled };
+  }
+
+  it("confirms a pause and a resume in the 120px transient vessel", async () => {
+    await mountHud();
+
+    emit(agentsToggled(false, true));
+    await flushPromises();
+    const paused = screen.getByRole("status", { name: "Agents is paused." });
+    expect(paused).toHaveTextContent("Agents paused");
+    expect(paused).toHaveAttribute("data-agents-state", "paused");
+    expect(paused.parentElement).toHaveAttribute("data-motion-width", "120");
+
+    // A second press replaces the pill in place.
+    emit(agentsToggled(true, false));
+    await flushPromises();
+    expect(screen.queryByRole("status", { name: "Agents is paused." })).toBeNull();
+    expect(screen.getByRole("status", { name: "Agents is on." })).toHaveTextContent("Agents on");
+  });
+
+  it("names a provider that needs the user once a resume settles", async () => {
+    await mountHud();
+
+    emit(agentsToggled(true, false));
+    await flushPromises();
+    emit(agentsToggled(true, true, "codex"));
+    await flushPromises();
+
+    const status = screen.getByRole("status", {
+      name: "Agents is on. Codex needs attention. Open Agents to check it.",
+    });
+    expect(status).toHaveTextContent("Check Codex");
+  });
+
+  it("does not re-show the pill for a clean settled resume", async () => {
+    await mountHud();
+
+    emit(agentsToggled(true, true));
+    await flushPromises();
+
+    expect(screen.queryByTestId("hud-agents-toggle")).toBeNull();
+  });
+
   // --- Provider timeout transient (transparent-indicators Task 2.2) --------
   //
   // Timeout and generic error outcomes share the raw-fallback transient family.

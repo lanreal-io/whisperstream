@@ -104,6 +104,7 @@ export function SetupStepHotkey({
       shortcut,
       action: "a profile shortcut",
     })),
+    { shortcut: config.agents_toggle_shortcut ?? "", action: "the Agents on/off shortcut" },
     { shortcut: "enter", action: "Enter" },
     { shortcut: "esc", action: "Escape" },
   ];

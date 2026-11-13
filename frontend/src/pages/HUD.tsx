@@ -163,6 +163,7 @@ import {
   EnhancementTimeoutIndicator,
   EnhancementErrorIndicator,
   BlockedIndicator,
+  AgentsToggleIndicator,
 } from "../components/Waveform";
 import {
   ClaudePermissionPill,
@@ -288,6 +289,10 @@ const BLOCKED_MS = 2000;
 // inherits the whole machinery unchanged: generation counter, foreground
 // pause/resume, queue-behind-dictation, and the shared 300ms hide tail.
 export const ENHANCE_TIMEOUT_MS = 2000;
+// The Agents on/off confirmation: long enough to read two words, short enough
+// to stay out of the way. A provider that needs the user stays a beat longer.
+export const AGENTS_TOGGLE_MS = 1600;
+export const AGENTS_TOGGLE_ATTENTION_MS = 2400;
 
 export interface HudProps {
   /**
@@ -1294,6 +1299,12 @@ export function HUD({ uiQaFixtureId, demoForcedState }: HudProps = {}) {
           state: "enhance_timeout",
           generation: 1,
           provider: forcedHudState.timeoutProvider,
+        }
+      : forcedHudState?.agentsToggle !== undefined
+      ? {
+          state: forcedHudState.agentsToggle.enabled ? "agents_on" : "agents_paused",
+          generation: 1,
+          attention: forcedHudState.agentsToggle.attention ?? null,
         }
       : null;
   // The stamp reads the dictation model directly, so the frozen model has to
@@ -2303,7 +2314,11 @@ export function HUD({ uiQaFixtureId, demoForcedState }: HudProps = {}) {
       transient.state === "enhance_timeout" ||
       transient.state === "enhance_error"
         ? ENHANCE_TIMEOUT_MS
-        : BLOCKED_MS;
+        : transient.state === "agents_on" || transient.state === "agents_paused"
+          ? transient.attention
+            ? AGENTS_TOGGLE_ATTENTION_MS
+            : AGENTS_TOGGLE_MS
+          : BLOCKED_MS;
     if (transientTimerRef.current?.generation !== transient.generation) {
       transientTimerRef.current = {
         generation: transient.generation,
@@ -2851,6 +2866,24 @@ export function HUD({ uiQaFixtureId, demoForcedState }: HudProps = {}) {
         setTransient({ state: "enhance_error", generation, provider });
       }
 
+      if (event.type === "agents.toggled") {
+        // Each press replaces the pill in place (new generation, fresh timer)
+        // rather than stacking. A pause and the first resume event always
+        // show; the settled resume re-shows only to name a provider that
+        // needs the user, since the first event already said "on".
+        if (!event.enabled || !event.settled || event.attention !== null) {
+          console.log(
+            `[HUD] agents toggled enabled=${event.enabled} attention=${event.attention ?? "none"}`,
+          );
+          const generation = ++transientGenerationRef.current;
+          setTransient({
+            state: event.enabled ? "agents_on" : "agents_paused",
+            generation,
+            attention: event.attention,
+          });
+        }
+      }
+
 
     });
   }, [send, subscribe, toggleHudExpansion, setReplyBuffers, fadeOutConsole]);
@@ -3262,7 +3295,9 @@ export function HUD({ uiQaFixtureId, demoForcedState }: HudProps = {}) {
           ? CLAUDE_PERMISSION_PILL_W
           : pillState === "blocked" ||
               pillState === "enhance_timeout" ||
-              pillState === "enhance_error"
+              pillState === "enhance_error" ||
+              pillState === "agents_on" ||
+              pillState === "agents_paused"
             ? PILL_WIDTH
             : showPillProfileMark
               ? PILL_WIDTH_PROFILE
@@ -3310,6 +3345,13 @@ export function HUD({ uiQaFixtureId, demoForcedState }: HudProps = {}) {
           (presentation.mode === "pill"
             ? presentation.errorProvider
             : undefined) ?? "custom"
+        }
+      />
+    ) : pillState === "agents_on" || pillState === "agents_paused" ? (
+      <AgentsToggleIndicator
+        enabled={pillState === "agents_on"}
+        attention={
+          presentation.mode === "pill" ? presentation.agentsAttention : null
         }
       />
     ) : pillState === "blocked" ? (
