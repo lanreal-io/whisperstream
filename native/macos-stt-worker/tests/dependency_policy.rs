@@ -20,7 +20,16 @@ fn dependency_uses_exact_direct_swift_revision() {
 #[test]
 fn license_audit_retains_separate_shipping_review() {
     let policy = fs::read_to_string(root().join("license-audit.toml")).unwrap();
-    assert!(policy.contains("NOT_REVIEWED_FOR_SHIPPING"));
+    assert!(policy.contains("REVIEWED_NOTICES_IN_THIRD_PARTY_LICENSES"));
+    let notices = fs::read_to_string(root().join("../../THIRD_PARTY_LICENSES.txt")).unwrap();
+    for library in [
+        "Library : FluidAudio",
+        "Library : fastcluster",
+        "Library : Supertonic-derived code",
+        "Library : StyleTTS2-derived code",
+    ] {
+        assert!(notices.contains(library), "{library} notice missing");
+    }
     assert!(policy.contains("tracked_license_text = true"));
     assert!(policy.contains(REVISION));
     let lock = fs::read_to_string(root().join("swift-dependency.lock.json")).unwrap();

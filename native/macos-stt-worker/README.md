@@ -10,8 +10,11 @@ The original Swift FFI in `swift/WhisperstreamAsrBridge.swift` depends directly
 on Apache-2.0 FluidAudio `0.14.8`, revision
 `56607d90b97de7d95a731200563bf49aa5beef20`. `Package.resolved` freezes that
 revision. The former `fluidaudio-rs` dependency is removed; none of its wrapper
-implementation is copied or linked. Distribution remains separately unreviewed
-in `license-audit.toml`.
+implementation is copied or linked. FluidAudio 0.14.8 has no package traits, so
+its whole library target, TTS code included, is compiled in. That closure
+(FluidAudio, fastcluster, and Supertonic- and StyleTTS2-derived code) was
+reviewed for distribution; `license-audit.toml` records it and the notices are
+in `THIRD_PARTY_LICENSES.txt`. Review it again when the pin changes.
 
 The bridge loads exact cached CoreML models directly, without download or
 recovery helpers. Every final decode creates a fresh `TdtDecoderState`. It
