@@ -791,8 +791,10 @@ export function HudConfigModal({
           HoverTooltip would be clipped by an overflow ancestor anyway. The
           width is back to 600: 720 only ever existed to seat the always-open
           voice list. */}
+      {/* The pop-in belongs to the dialog. Embedded in the Agents page it
+          scaled and slid the settings up just after the page opened. */}
       <motion.div
-        initial={{ scale: 0.92, opacity: 0, y: 12 }}
+        initial={embedded ? false : { scale: 0.92, opacity: 0, y: 12 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.08 }}
         className={embedded ? "relative w-full max-w-[760px] pb-8" : "relative flex max-h-[calc(100vh-40px)] w-[600px] max-w-[calc(100vw-40px)] flex-col rounded-[var(--radius-card)] p-7"}
