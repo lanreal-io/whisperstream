@@ -616,6 +616,38 @@ def _section2_native(txt: TxtBuilder, rows: Rows) -> None:
         PORTAUDIO_FILE,
     )
 
+    # macOS native helper (whisperstream-macos-stt-worker): FluidAudio 0.14.8
+    # has no package traits, so its whole library target, TTS code included,
+    # is compiled in. Re-review the linked closure if the pin changes.
+    txt.line("macOS native helper (whisperstream-macos-stt-worker). These libraries are")
+    txt.line("compiled into the Mac app's native speech helper.")
+    txt.line("")
+    emit_native(
+        "FluidAudio", "FluidInference", "Apache-2.0",
+        "https://github.com/FluidInference/FluidAudio", APACHE_FILE,
+        version="0.14.8",
+        provenance=(
+            "Revision: 56607d90b97de7d95a731200563bf49aa5beef20",
+            "Package traits: none at this version (the full library target is compiled in)",
+            "Includes code derived from: VBx (Copyright 2021-2024 BUT Speech@FIT, Apache-2.0); "
+            "NVIDIA NeMo (Copyright NVIDIA Corporation, Apache-2.0); misaki (hexgrad, Apache-2.0)",
+        ),
+    )
+    emit_native(
+        "fastcluster (via FluidAudio FastClusterWrapper)", "Daniel Müllner; Google Inc.",
+        "BSD-2-Clause", "https://github.com/fastcluster/fastcluster",
+        LICENSE_TEXTS_DIR / "fastcluster-bsd2.txt",
+        provenance=("Notice: ThirdPartyLicenses/fastcluster-LICENSE.md in FluidAudio 0.14.8",),
+    )
+    emit_native(
+        "Supertonic-derived code (via FluidAudio)", "Supertone Inc.", "MIT",
+        "https://github.com/supertone-inc/supertonic", LICENSE_TEXTS_DIR / "supertonic-mit.txt",
+    )
+    emit_native(
+        "StyleTTS2-derived code (via FluidAudio)", "Aaron (Yinghao) Li", "MIT",
+        "https://github.com/yl4579/StyleTTS2", LICENSE_TEXTS_DIR / "styletts2-mit.txt",
+    )
+
     ok("Native library attributions written")
 
 

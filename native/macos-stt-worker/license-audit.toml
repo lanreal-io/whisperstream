@@ -1,14 +1,30 @@
 schema = 1
-scope = "internal-non-distributed-macos-stt-prototype"
+scope = "shipped-macos-native-helper"
 
 [[dependency]]
 name = "FluidAudio"
 source = "https://github.com/FluidInference/FluidAudio.git"
 revision = "56607d90b97de7d95a731200563bf49aa5beef20"
 swift_fluidaudio_version = "0.14.8"
+enabled_traits = []  # 0.14.8 has no package traits: the whole library target, TTS code included, is compiled in
 declared_license = "Apache-2.0"
 tracked_license_text = true
-distribution_status = "NOT_REVIEWED_FOR_SHIPPING"
+distribution_status = "REVIEWED_NOTICES_IN_THIRD_PARTY_LICENSES"
+review = "2026-11-12 closure check of FluidAudio 0.14.8 against the linked helper binary; notices in THIRD_PARTY_LICENSES.txt"
+license_sha256 = "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+notice_file = "none"
+linked_third_party = [
+  "fastcluster BSD-2-Clause (ThirdPartyLicenses/fastcluster-LICENSE.md sha256 67594dbe4a7477719c8160373e7767c2c319ef966a6042f76846a18af02cde0a)",
+  "VBx-derived Swift, Apache-2.0 (ThirdPartyLicenses/vbx-LICENSE.md)",
+  "NVIDIA NeMo-derived Swift (Sortformer state updater, CTC word spotter, Magpie tokenizer), Apache-2.0",
+  "misaki-derived Swift (Mandarin G2P tables and rules), Apache-2.0",
+  "Supertonic-derived Swift (Supertonic3UnicodeProcessor tables), MIT",
+  "StyleTTS2-derived Swift (StyleTTS2TextCleaner symbol table), MIT",
+]
+# Ports judged algorithm- or orthography-only, with no copied tables linked:
+# jieba HMM Viterbi (tables are downloaded at runtime) and pypinyin y/w spelling rules.
+not_linked = ["FunASR-derived code (not present at 0.14.8)", "LocalVQE (not present at 0.14.8)", "NemoTextProcessing (not present at 0.14.8)", "TTS model weights and G2P data files (FluidAudio runtime downloads; the bridge uses only AsrManager with cached models)"]
+# Rerun the review if the pin moves.
 
 [owned_bridge]
 path = "swift/WhisperstreamAsrBridge.swift"
